@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MT HR Clock-In</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px 20px; background-color: #f4f6f9; color: #333; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
+        .btn { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 10px rgba(6, 199, 85, 0.3); }
+        #status { margin-top: 15px; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>MT HR Connect</h2>
+        <p>ยินดีต้อนรับพนักงานทุกท่าน</p>
+        <button id="btn-clockin" class="btn">กดบันทึกเวลาเข้างาน (Clock In)</button>
+        <p id="status">ระบบพร้อมบันทึกเวลาและพิกัดของคุณ</p>
+    </div>
+    <script>
+        document.getElementById('btn-clockin').addEventListener('click', () => {
+            const statusText = document.getElementById('status');
+            statusText.innerText = "กำลังดึงพิกัด GPS...";
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        alert(`ดึงพิกัดสำเร็จ!\nละติจูด: ${position.coords.latitude}\nลองจิจูด: ${position.coords.longitude}`);
+                        statusText.innerText = "บันทึกเวลาสำเร็จ";
+                    },
+                    (error) => {
+                        alert("กรุณาเปิดสิทธิ์แชร์ตำแหน่ง (Location) บนมือถือหรือในแอป LINE ด้วยครับ");
+                        statusText.innerText = "เกิดข้อผิดพลาดในการดึงพิกัด";
+                    }
+                );
+            } else {
+                alert("เครื่องมือถือของคุณไม่รองรับการดึงพิกัด GPS");
+            }
+        });
+    </script>
+</body>
+</html>
