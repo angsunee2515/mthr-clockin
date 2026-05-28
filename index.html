@@ -35,8 +35,8 @@
                             longitude: position.coords.longitude
                         };
 
-                        // เชื่อมโยงเข้ากับ Production Webhook บนระบบ n8n ของคุณโบเรียบร้อยแล้วครับ
-                        fetch('http://84.247.147.50:5678/webhook/mthr-clockin', {
+                        // ปรับเป็นลิงก์ Webhook-test สำหรับทดสอบรับค่าในหน้าจอปัจจุบันเรียบร้อยครับ
+                        fetch('http://84.247.147.50:5678/webhook-test/mthr-clockin', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
