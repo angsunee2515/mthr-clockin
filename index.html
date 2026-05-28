@@ -26,11 +26,37 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
-                        alert(`ดึงพิกัดสำเร็จ!\nละติจูด: ${position.coords.latitude}\nลองจิจูด: ${position.coords.longitude}`);
-                        statusText.innerText = "บันทึกเวลาสำเร็จ";
+                        statusText.innerText = "กำลังส่งข้อมูลเข้าสู่ระบบหลังบ้าน...";
+                        
+                        // เตรียมข้อมูลส่งไปที่ n8n หลังบ้าน
+                        const payload = {
+                            timestamp: new Date().toISOString(),
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+
+                        // เชื่อมโยงเข้ากับ Production Webhook บนระบบ n8n ของคุณโบเรียบร้อยแล้วครับ
+                        fetch('http://84.247.147.50:5678/webhook/mthr-clockin', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        })
+                        .then(response => {
+                            if(response.ok) {
+                                alert("บันทึกเวลาและพิกัดสำเร็จเรียบร้อยแล้วครับ!");
+                                statusText.innerText = "บันทึกเวลาสำเร็จ";
+                            } else {
+                                alert("ระบบหลังบ้านปฏิเสธการบันทึก (พนักงานอาจอยู่เกินระยะบริษัท)");
+                                statusText.innerText = "บันทึกไม่สำเร็จ";
+                            }
+                        })
+                        .catch(error => {
+                            alert("เกิดข้อผิดพลาดในการส่งข้อมูลไปที่หลังบ้าน");
+                            statusText.innerText = "ส่งข้อมูลล้มเหลว";
+                        });
                     },
                     (error) => {
-                        alert("กรุณาเปิดสิทธิ์แชร์ตำแหน่ง (Location) บนมือถือหรือในแอป LINE ด้วยครับ");
+                        alert("กรุณาเปิดสิทธิ์แชร์ตำแหน่ง (Location) บนมือถือด้วยครับ");
                         statusText.innerText = "เกิดข้อผิดพลาดในการดึงพิกัด";
                     }
                 );
