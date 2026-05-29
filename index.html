@@ -63,9 +63,7 @@
                 timestamp: new Date().toISOString()
             };
 
-            // 👇👇👇 แก้ไขตรงนี้จุดเดียวครับ: ลบคำภาษาไทยออก แล้วเอาลิงก์จาก Make.com มาวางในเครื่องหมายคำพูด 👇👇👇
-            const webhookUrl = "วางลิงก์จาก_Make_ตรงนี้ครับ";
-            // 👆👆👆 ------------------------------------------------------------------------- 👆👆👆
+            const webhookUrl = "https://hook.eu1.make.com/m268mbd6cvbo57qjj77aelat2stnm9fk";
 
             const response = await fetch(webhookUrl, {
                 method: "POST",
