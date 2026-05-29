@@ -6,64 +6,94 @@
     <title>MT HR Clock-In</title>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px 20px; background-color: #f4f6f9; color: #333; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
-        .btn { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 20px; box-shadow: 0 4px 10px rgba(6, 199, 85, 0.3); }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0,0.1); max-width: 400px; margin: auto; }
+        .btn { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; }
         #status { margin-top: 15px; color: #666; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>MT HR Connect</h2>
-        <p>ยินดีต้อนรับพนักงานทุกท่าน</p>
-        <button id="btn-clockin" class="btn">กดบันทึกเวลาเข้างาน (Clock In)</button>
-        <p id="status">ระบบพร้อมบันทึกเวลาและพิกัดของคุณ</p>
-    </div>
-    <script>
-        document.getElementById('btn-clockin').addEventListener('click', () => {
-            const statusText = document.getElementById('status');
-            statusText.innerText = "กำลังดึงพิกัด GPS...";
-            
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        statusText.innerText = "กำลังส่งข้อมูลเข้าสู่ระบบหลังบ้าน...";
-                        
-                        // เตรียมข้อมูลส่งไปที่ n8n หลังบ้าน
-                        const payload = {
-                            timestamp: new Date().toISOString(),
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude
-                        };
 
-                        // ปรับเป็นลิงก์ Webhook-test สำหรับทดสอบรับค่าในหน้าจอปัจจุบันเรียบร้อยครับ
-                        fetch('http://84.247.147.50:5678/webhook-test/mthr-clockin', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        })
-                        .then(response => {
-                            if(response.ok) {
-                                alert("บันทึกเวลาและพิกัดสำเร็จเรียบร้อยแล้วครับ!");
-                                statusText.innerText = "บันทึกเวลาสำเร็จ";
-                            } else {
-                                alert("ระบบหลังบ้านปฏิเสธการบันทึก (พนักงานอาจอยู่เกินระยะบริษัท)");
-                                statusText.innerText = "บันทึกไม่สำเร็จ";
-                            }
-                        })
-                        .catch(error => {
-                            alert("เกิดข้อผิดพลาดในการส่งข้อมูลไปที่หลังบ้าน");
-                            statusText.innerText = "ส่งข้อมูลล้มเหลว";
-                        });
-                    },
-                    (error) => {
-                        alert("กรุณาเปิดสิทธิ์แชร์ตำแหน่ง (Location) บนมือถือด้วยครับ");
-                        statusText.innerText = "เกิดข้อผิดพลาดในการดึงพิกัด";
-                    }
-                );
+<div class="card">
+    <h2>MT HR Connect</h2>
+    <p>ยินดีต้อนรับพนักงานทุกท่าน</p>
+    <button id="btn-clockin" class="btn">กดบันทึกเวลาเข้างาน (Clock In)</button>
+    <p id="status">ระบบพร้อมบันทึกเวลาและพิกัดของคุณ</p>
+</div>
+
+<!-- รวมสคริปต์ใช้งาน LIFF และการส่งข้อมูลหลังบ้าน -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+    const makeWebhookUrl = "https://hook.eu1.make.com/m268mbd6cvbo57qjj77aelat2stnm9fk";
+
+    async function initLiff() {
+        try {
+            await liff.init({ liffId: "2004739194-VpG0ZgNn" }); // คาดว่าเป็น LIFF ID เดิมของระบบ
+            if (!liff.isLoggedIn()) {
+                liff.login();
             } else {
-                alert("เครื่องมือถือของคุณไม่รองรับการดึงพิกัด GPS");
+                document.getElementById('btn-clockin').addEventListener('click', handleClockIn);
             }
-        });
-    </script>
+        } catch (error) {
+            console.error("LIFF Initialization failed", error);
+            document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการโหลดระบบ LINE LIFF";
+        }
+    }
+
+    function handleClockIn() {
+        document.getElementById('status').innerText = "กำลังดึงพิกัดตำแหน่งของคุณ...";
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(sendData, locationError, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
+        } else {
+            document.getElementById('status').innerText = "เบราว์เซอร์ของคุณไม่รองรับการดึงพิกัด";
+        }
+    }
+
+    async function sendData(position) {
+        document.getElementById('status').innerText = "กำลังส่งข้อมูลเข้าสู่ระบบหลังบ้าน...";
+        try {
+            const profile = await liff.getProfile();
+            const payload = {
+                userId: profile.userId,
+                displayName: profile.displayName,
+                pictureUrl: profile.pictureUrl,
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                timestamp: new Date().toISOString()
+            };
+
+            const response = await fetch(makeWebhookUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                document.getElementById('status').innerText = "บันทึกเวลาและพิกัดสำเร็จเรียบร้อยแล้ว!";
+                alert("บันทึกเวลาสำเร็จ!");
+                liff.closeWindow();
+            } else {
+                throw new Error("Server responded with error");
+            }
+        } catch (error) {
+            console.error("Error sending data", error);
+            document.getElementById('status').innerText = "ส่งข้อมูลล้มเหลว";
+            alert("เกิดข้อผิดพลาดในการส่งข้อมูลไปที่หลังบ้าน");
+        }
+    }
+
+    function locationError(error) {
+        console.error("Location error", error);
+        document.getElementById('status').innerText = "ไม่สามารถดึงพิกัดได้ กรุณาเปิด GPS และอนุญาตสิทธิ์เข้าถึงตำแหน่ง";
+        alert("กรุณาเปิด GPS และอนุญาตให้แอปเข้าถึงตำแหน่งที่ตั้งของคุณ");
+    }
+
+    // เริ่มทำงานเมื่อเปิดหน้าเว็บ
+    initLiff();
+</script>
+
 </body>
 </html>
