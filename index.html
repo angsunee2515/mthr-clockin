@@ -6,7 +6,7 @@
     <title>MT HR Clock-In</title>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px 20px; background-color: #f4f6f9; color: #333; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0,0.1); max-width: 400px; margin: auto; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
         .btn { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; }
         #status { margin-top: 15px; color: #666; font-size: 14px; }
     </style>
@@ -20,14 +20,13 @@
     <p id="status">ระบบพร้อมบันทึกเวลาและพิกัดของคุณ</p>
 </div>
 
-<!-- รวมสคริปต์ใช้งาน LIFF และการส่งข้อมูลหลังบ้าน -->
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
     const makeWebhookUrl = "https://hook.eu1.make.com/m268mbd6cvbo57qjj77aelat2stnm9fk";
 
     async function initLiff() {
         try {
-            await liff.init({ liffId: "2004739194-VpG0ZgNn" }); // คาดว่าเป็น LIFF ID เดิมของระบบ
+            await liff.init({ liffId: "2004740263-K8bX4bQQ" });
             if (!liff.isLoggedIn()) {
                 liff.login();
             } else {
@@ -53,7 +52,7 @@
     }
 
     async function sendData(position) {
-        document.getElementById('status').innerText = "กำลังส่งข้อมูลเข้าสู่ระบบหลังบ้าน...";
+        document.getElementById('status').innerText = "กำลังส่งข้อมูลไปที่หลังบ้าน...";
         try {
             const profile = await liff.getProfile();
             const payload = {
@@ -91,7 +90,6 @@
         alert("กรุณาเปิด GPS และอนุญาตให้แอปเข้าถึงตำแหน่งที่ตั้งของคุณ");
     }
 
-    // เริ่มทำงานเมื่อเปิดหน้าเว็บ
     initLiff();
 </script>
 
