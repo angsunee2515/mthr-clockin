@@ -37,14 +37,14 @@
 
     function handleClockIn() {
         document.getElementById('btn-clockin').disabled = true;
-        document.getElementById('status').innerText = "กำลังตรวจสอบพิกัดแบบรวดเร็ว...";
+        document.getElementById('status').innerText = "กำลังค้นหาพิกัด GPS (รอสักครู่)...";
         
         if (navigator.geolocation) {
-            // บังคับดึงพิกัดด่วนภายใน 5 วินาที ถ้าไม่ทันให้ข้ามไปส่งข้อมูลทันที
+            // ปรับให้รอ GPS นานขึ้นเป็น 10 วินาที
             navigator.geolocation.getCurrentPosition(
                 (pos) => sendData(pos.coords.latitude, pos.coords.longitude),
                 () => sendData("-", "-"), 
-                { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         } else {
             sendData("-", "-");
@@ -64,7 +64,6 @@
                 timestamp: new Date().toISOString()
             };
 
-            // ใส่ลิงก์ Webhook ของจริงของคุณโบเรียบร้อยแล้วครับ
             const webhookUrl = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n";
 
             const response = await fetch(webhookUrl, {
