@@ -7,7 +7,7 @@
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px 20px; background-color: #f4f6f9; color: #333; }
         .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        #status { font-size: 16px; font-weight: bold; color: #e67e22; margin-top: 20px;}
+        #status { font-size: 18px; font-weight: bold; color: #06C755; margin-top: 20px;}
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #06C755; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -18,55 +18,31 @@
 <div class="card">
     <h2>MT HR Connect</h2>
     <div id="loading-spinner" class="loader"></div>
-    <p id="status">ขั้นที่ 1: เตรียมระบบ...</p>
+    <p id="status">กำลังเข้าสู่ระบบ...</p>
 </div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-    const today = new Date().toLocaleDateString('th-TH');
-
     async function initLiff() {
         try {
-            document.getElementById('status').innerText = "ขั้นที่ 2: กำลังเชื่อมต่อ LINE...";
             await liff.init({ liffId: "2010214347-gbhKImBf" });
-            
-            document.getElementById('status').innerText = "ขั้นที่ 3: เช็คสถานะล็อกอิน...";
             if (!liff.isLoggedIn()) {
                 liff.login();
             } else {
-                checkDuplicateClockIn();
+                autoClockIn();
             }
         } catch (error) {
-            document.getElementById('status').innerText = "Error ขั้นที่ 2: รหัส LIFF มีปัญหา";
+            document.getElementById('status').innerText = "System Error: โหลดระบบไม่ได้";
             document.getElementById('loading-spinner').style.display = 'none';
-        }
-    }
-
-    function checkDuplicateClockIn() {
-        document.getElementById('status').innerText = "ขั้นที่ 4: เช็คการลงเวลาซ้ำ...";
-        const lastClockInDate = localStorage.getItem('lastClockInDate');
-        
-        if (lastClockInDate === today) {
-            document.getElementById('loading-spinner').style.display = 'none';
-            document.getElementById('status').innerText = "คุณลงเวลาของวันนี้ไปแล้ว";
-            Swal.fire({
-                title: 'ลงเวลาซ้ำ!',
-                text: 'คุณได้ลงเวลาเข้างานของวันนี้ไปแล้วค่ะ (ไม่ลงเวลาซ้ำนะคะ)',
-                icon: 'warning',
-                confirmButtonText: 'ตกลง',
-                confirmButtonColor: '#f39c12'
-            }).then(() => { liff.closeWindow(); });
-        } else {
-            autoClockIn();
         }
     }
 
     function autoClockIn() {
-        document.getElementById('status').innerText = "ขั้นที่ 5: กำลังขอพิกัด GPS...";
+        document.getElementById('status').innerText = "กำลังบันทึกเวลาและพิกัด...";
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => sendData(pos.coords.latitude, pos.coords.longitude),
-                (err) => sendData("-", "-"), 
+                () => sendData("-", "-"), 
                 { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 }
             );
         } else {
@@ -76,18 +52,20 @@
 
     async function sendData(lat, lng) {
         try {
-            document.getElementById('status').innerText = "ขั้นที่ 6: กำลังส่งเข้าตาราง...";
             const profile = await liff.getProfile();
             
             const now = new Date();
+            const currentDate = now.toLocaleDateString('th-TH');
+            const currentTime = now.toLocaleTimeString('th-TH');
+
             const payload = {
                 userId: profile.userId,
                 displayName: profile.displayName,
                 pictureUrl: profile.pictureUrl,
                 latitude: lat,
                 longitude: lng,
-                date: now.toLocaleDateString('th-TH'), 
-                time: now.toLocaleTimeString('th-TH')  
+                date: currentDate,
+                time: currentTime
             };
 
             const webhookUrl = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n";
@@ -99,8 +77,7 @@
             });
 
             if (response.ok) {
-                localStorage.setItem('lastClockInDate', today);
-                document.getElementById('status').innerText = "สำเร็จ 100%!";
+                document.getElementById('status').innerText = "บันทึกสำเร็จ!";
                 document.getElementById('loading-spinner').style.display = 'none';
                 
                 Swal.fire({
@@ -109,15 +86,21 @@
                     icon: 'success',
                     showConfirmButton: false,
                     timer: 2000
-                }).then(() => { liff.closeWindow(); });
+                }).then(() => {
+                    liff.closeWindow();
+                });
+
             } else {
                 throw new Error("Server Error");
             }
         } catch (error) {
-            document.getElementById('status').innerText = "Error ขั้นที่ 6: ส่งข้อมูลไม่สำเร็จ";
+            document.getElementById('status').innerText = "ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่";
             document.getElementById('loading-spinner').style.display = 'none';
         }
     }
 
     initLiff();
-</
+</script>
+
+</body>
+</html>
