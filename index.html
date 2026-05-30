@@ -8,7 +8,6 @@
         body { font-family: sans-serif; text-align: center; padding: 50px 20px; background-color: #f4f6f9; color: #333; }
         .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
         #status { font-size: 18px; font-weight: bold; color: #06C755; margin-top: 20px;}
-        /* วงกลมโหลดดิ้งหมุนๆ ให้รู้ว่าระบบกำลังทำงาน */
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #06C755; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -19,29 +18,54 @@
 <div class="card">
     <h2>MT HR Connect</h2>
     <div id="loading-spinner" class="loader"></div>
-    <p id="status">กำลังเข้าสู่ระบบ...</p>
+    <p id="status">กำลังตรวจสอบข้อมูลของคุณ...</p>
 </div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
+    // ดึงวันที่ปัจจุบัน
+    const today = new Date().toLocaleDateString('th-TH');
+
     async function initLiff() {
         try {
-            await liff.init({ liffId: "2010214347-gbhKImBf" });
+            await liff.init({ liffId: "ใส่_LIFF_ID_ของคุณที่นี่" });
             if (!liff.isLoggedIn()) {
                 liff.login();
             } else {
-                // พอโหลด LINE เสร็จ ให้เริ่มตอกบัตรอัตโนมัติเลย (ไม่ต้องรอพนักงานกดปุ่ม)
-                autoClockIn();
+                checkDuplicateClockIn();
             }
         } catch (error) {
-            document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการโหลดระบบ LINE";
+            document.getElementById('status').innerText = "ขัดข้อง ไม่สามารถโหลดระบบได้";
             document.getElementById('loading-spinner').style.display = 'none';
         }
     }
 
-    function autoClockIn() {
-        document.getElementById('status').innerText = "กำลังดึงพิกัด (รอสักครู่)...";
+    // ฟังก์ชันเช็คการกดซ้ำ
+    function checkDuplicateClockIn() {
+        const lastClockInDate = localStorage.getItem('lastClockInDate');
         
+        if (lastClockInDate === today) {
+            // ถ้าวันนี้เคยกดแล้ว ให้เด้งเตือน
+            document.getElementById('loading-spinner').style.display = 'none';
+            document.getElementById('status').innerText = "คุณลงเวลาของวันนี้ไปแล้ว";
+            
+            Swal.fire({
+                title: 'ลงเวลาซ้ำ!',
+                text: 'คุณได้ลงเวลาเข้างานของวันนี้ไปแล้วค่ะ (ไม่ลงเวลาซ้ำนะคะ)',
+                icon: 'warning',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#f39c12'
+            }).then(() => {
+                liff.closeWindow(); // ปิดหน้าต่างทันที
+            });
+        } else {
+            // ถ้ายังไม่เคยกด ให้ดึงพิกัดต่อ
+            autoClockIn();
+        }
+    }
+
+    function autoClockIn() {
+        document.getElementById('status').innerText = "กำลังบันทึกเวลาและพิกัด...";
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => sendData(pos.coords.latitude, pos.coords.longitude),
@@ -54,26 +78,18 @@
     }
 
     async function sendData(lat, lng) {
-        document.getElementById('status').innerText = "กำลังบันทึกเวลาเข้างาน...";
         try {
             const profile = await liff.getProfile();
-            
-            const now = new Date();
-            const thaiDate = now.toLocaleDateString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit' });
-            const thaiTime = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
             const payload = {
                 userId: profile.userId,
                 displayName: profile.displayName,
                 pictureUrl: profile.pictureUrl,
                 latitude: lat,
                 longitude: lng,
-                date: thaiDate,
-                time: thaiTime,
-                timestamp: now.toISOString()
+                timestamp: new Date().toISOString()
             };
 
-            const webhookUrl = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n";
+            const webhookUrl = "ใส่_WEBHOOK_URL_ของคุณที่นี่";
 
             const response = await fetch(webhookUrl, {
                 method: "POST",
@@ -82,18 +98,20 @@
             });
 
             if (response.ok) {
+                // บันทึกความจำลงในมือถือว่า "วันนี้กดแล้วนะ"
+                localStorage.setItem('lastClockInDate', today);
+
                 document.getElementById('status').innerText = "บันทึกสำเร็จ!";
                 document.getElementById('loading-spinner').style.display = 'none';
                 
-                // โชว์ป๊อปอัปสวยๆ แต่ซ่อนปุ่ม "ตกลง" และให้ปิดแอปเองใน 2 วินาที
                 Swal.fire({
                     title: 'สำเร็จ!',
                     text: 'บันทึกเวลาเข้างานเรียบร้อย',
                     icon: 'success',
-                    showConfirmButton: false, // ซ่อนปุ่มกด
-                    timer: 2000 // ตั้งเวลา 2 วินาที (2000 มิลลิวินาที)
+                    showConfirmButton: false,
+                    timer: 2000
                 }).then(() => {
-                    liff.closeWindow(); // ปิดหน้าต่าง LINE ให้เลยอัตโนมัติ
+                    liff.closeWindow();
                 });
 
             } else {
