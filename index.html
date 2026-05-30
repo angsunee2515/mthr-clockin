@@ -28,7 +28,8 @@
 
     async function initLiff() {
         try {
-            await liff.init({ liffId: "ใส่_LIFF_ID_ของคุณที่นี่" });
+            // ใส่ LIFF ID ของคุณโบกลับคืนมาแล้วครับ
+            await liff.init({ liffId: "2010214347-gbhKImBf" });
             if (!liff.isLoggedIn()) {
                 liff.login();
             } else {
@@ -89,7 +90,8 @@
                 timestamp: new Date().toISOString()
             };
 
-            const webhookUrl = "ใส่_WEBHOOK_URL_ของคุณที่นี่";
+            // ใส่ Webhook URL ของ Make.com กลับคืนมาแล้วครับ
+            const webhookUrl = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n";
 
             const response = await fetch(webhookUrl, {
                 method: "POST",
