@@ -43,7 +43,7 @@
             // บังคับดึงพิกัดด่วนภายใน 5 วินาที ถ้าไม่ทันให้ข้ามไปส่งข้อมูลทันที
             navigator.geolocation.getCurrentPosition(
                 (pos) => sendData(pos.coords.latitude, pos.coords.longitude),
-                () => sendData("-", "-"), // ถ้า GPS ช้า ข้ามมาส่งชื่อกับเวลาก่อนเลย
+                () => sendData("-", "-"), 
                 { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
             );
         } else {
@@ -64,8 +64,8 @@
                 timestamp: new Date().toISOString()
             };
 
-            // 👇👇👇 วางลิงก์ Webhook อันใหม่จากหน้าจอ Make.com แทนที่ตรงนี้ครับ 👇👇👇
-            const webhookUrl = "วางลิงก์_WEBHOOK_อันใหม่ตรงนี้";
+            // ใส่ลิงก์ Webhook ของจริงของคุณโบเรียบร้อยแล้วครับ
+            const webhookUrl = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n";
 
             const response = await fetch(webhookUrl, {
                 method: "POST",
@@ -81,7 +81,7 @@
                 throw new Error("Server Error");
             }
         } catch (error) {
-            document.getElementById('status').innerText = "เกิดข้อผิดพลาด แต่ระบบกำลังบันทึกใหม่...";
+            document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่";
             document.getElementById('btn-clockin').disabled = false;
         }
     }
