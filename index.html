@@ -25,45 +25,47 @@
     async function initLiff() {
         try {
             await liff.init({ liffId: "2010214347-gbhKImBf" });
-
             if (!liff.isLoggedIn()) {
                 liff.login();
             } else {
                 document.getElementById('btn-clockin').addEventListener('click', handleClockIn);
             }
         } catch (error) {
-            console.error("LIFF Initialization failed", error);
             document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการโหลดระบบ LINE LIFF";
         }
     }
 
     function handleClockIn() {
-        document.getElementById('status').innerText = "กำลังดึงพิกัดตำแหน่งของคุณ...";
+        document.getElementById('btn-clockin').disabled = true;
+        document.getElementById('status').innerText = "กำลังตรวจสอบพิกัดแบบรวดเร็ว...";
+        
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(sendData, locationError, {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            });
+            // บังคับดึงพิกัดด่วนภายใน 5 วินาที ถ้าไม่ทันให้ข้ามไปส่งข้อมูลทันที
+            navigator.geolocation.getCurrentPosition(
+                (pos) => sendData(pos.coords.latitude, pos.coords.longitude),
+                () => sendData("-", "-"), // ถ้า GPS ช้า ข้ามมาส่งชื่อกับเวลาก่อนเลย
+                { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+            );
         } else {
-            document.getElementById('status').innerText = "เบราว์เซอร์ของคุณไม่รองรับการดึงพิกัด";
+            sendData("-", "-");
         }
     }
 
-    async function sendData(position) {
-        document.getElementById('status').innerText = "กำลังส่งข้อมูลไปที่หลังบ้าน...";
+    async function sendData(lat, lng) {
+        document.getElementById('status').innerText = "กำลังส่งข้อมูลเข้าตาราง...";
         try {
             const profile = await liff.getProfile();
             const payload = {
                 userId: profile.userId,
                 displayName: profile.displayName,
                 pictureUrl: profile.pictureUrl,
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
+                latitude: lat,
+                longitude: lng,
                 timestamp: new Date().toISOString()
             };
 
-            const webhookUrl = "https://hook.eu1.make.com/m268mbd6cvbo57qjj77aelat2stnm9fk";
+            // 👇👇👇 วางลิงก์ Webhook อันใหม่จากหน้าจอ Make.com แทนที่ตรงนี้ครับ 👇👇👇
+            const webhookUrl = "วางลิงก์_WEBHOOK_อันใหม่ตรงนี้";
 
             const response = await fetch(webhookUrl, {
                 method: "POST",
@@ -72,23 +74,16 @@
             });
 
             if (response.ok) {
-                document.getElementById('status').innerText = "บันทึกเวลาและพิกัดสำเร็จเรียบร้อยแล้ว!";
+                document.getElementById('status').innerText = "บันทึกเวลาสำเร็จเรียบร้อยแล้ว!";
                 alert("บันทึกเวลาสำเร็จ!");
                 liff.closeWindow();
             } else {
-                throw new Error("Server responded with error");
+                throw new Error("Server Error");
             }
         } catch (error) {
-            console.error("Error sending data", error);
-            document.getElementById('status').innerText = "ส่งข้อมูลล้มเหลว";
-            alert("เกิดข้อผิดพลาดในการส่งข้อมูลไปที่หลังบ้าน");
+            document.getElementById('status').innerText = "เกิดข้อผิดพลาด แต่ระบบกำลังบันทึกใหม่...";
+            document.getElementById('btn-clockin').disabled = false;
         }
-    }
-
-    function locationError(error) {
-        console.error("Location error", error);
-        document.getElementById('status').innerText = "ไม่สามารถดึงพิกัดได้ กรุณาเปิด GPS และอนุญาตสิทธิ์เข้าถึงตำแหน่ง";
-        alert("กรุณาเปิด GPS และอนุญาตให้แอปเข้าถึงตำแหน่งที่ตั้งของคุณ");
     }
 
     initLiff();
