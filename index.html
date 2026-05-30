@@ -23,12 +23,12 @@
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-    // ดึงวันที่ปัจจุบัน
+    // ตัวแปรเช็ควันที่ปัจจุบัน
     const today = new Date().toLocaleDateString('th-TH');
 
     async function initLiff() {
         try {
-            // ใส่ LIFF ID ของคุณโบกลับคืนมาแล้วครับ
+            // ใส่ LIFF ID ของคุณโบเรียบร้อยแล้ว
             await liff.init({ liffId: "2010214347-gbhKImBf" });
             if (!liff.isLoggedIn()) {
                 liff.login();
@@ -41,12 +41,11 @@
         }
     }
 
-    // ฟังก์ชันเช็คการกดซ้ำ
+    // ฟังก์ชันเช็คการกดซ้ำในวันเดียวกัน
     function checkDuplicateClockIn() {
         const lastClockInDate = localStorage.getItem('lastClockInDate');
         
         if (lastClockInDate === today) {
-            // ถ้าวันนี้เคยกดแล้ว ให้เด้งเตือน
             document.getElementById('loading-spinner').style.display = 'none';
             document.getElementById('status').innerText = "คุณลงเวลาของวันนี้ไปแล้ว";
             
@@ -57,14 +56,14 @@
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#f39c12'
             }).then(() => {
-                liff.closeWindow(); // ปิดหน้าต่างทันที
+                liff.closeWindow(); 
             });
         } else {
-            // ถ้ายังไม่เคยกด ให้ดึงพิกัดต่อ
             autoClockIn();
         }
     }
 
+    // ฟังก์ชันดึงพิกัด
     function autoClockIn() {
         document.getElementById('status').innerText = "กำลังบันทึกเวลาและพิกัด...";
         if (navigator.geolocation) {
@@ -78,55 +77,20 @@
         }
     }
 
+    // ฟังก์ชันส่งข้อมูลเข้า Make.com
     async function sendData(lat, lng) {
         try {
             const profile = await liff.getProfile();
+            
+            const now = new Date();
+            const currentDate = now.toLocaleDateString('th-TH'); 
+            const currentTime = now.toLocaleTimeString('th-TH'); 
+
             const payload = {
                 userId: profile.userId,
                 displayName: profile.displayName,
                 pictureUrl: profile.pictureUrl,
                 latitude: lat,
                 longitude: lng,
-                timestamp: new Date().toISOString()
-            };
-
-            // ใส่ Webhook URL ของ Make.com กลับคืนมาแล้วครับ
-            const webhookUrl = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n";
-
-            const response = await fetch(webhookUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                // บันทึกความจำลงในมือถือว่า "วันนี้กดแล้วนะ"
-                localStorage.setItem('lastClockInDate', today);
-
-                document.getElementById('status').innerText = "บันทึกสำเร็จ!";
-                document.getElementById('loading-spinner').style.display = 'none';
-                
-                Swal.fire({
-                    title: 'สำเร็จ!',
-                    text: 'บันทึกเวลาเข้างานเรียบร้อย',
-                    icon: 'success',
-                    showConfirmButton: false,
-                    timer: 2000
-                }).then(() => {
-                    liff.closeWindow();
-                });
-
-            } else {
-                throw new Error("Server Error");
-            }
-        } catch (error) {
-            document.getElementById('status').innerText = "ขัดข้อง กรุณากดลิงก์ตอกบัตรใหม่อีกครั้ง";
-            document.getElementById('loading-spinner').style.display = 'none';
-        }
-    }
-
-    initLiff();
-</script>
-
-</body>
-</html>
+                date: currentDate, 
+                time: currentTime
