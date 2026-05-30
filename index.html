@@ -10,6 +10,8 @@
         .btn { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; }
         #status { margin-top: 15px; color: #666; font-size: 14px; }
     </style>
+    <!-- เพิ่มระบบหน้าต่างแจ้งเตือน Pop-up แบบสวยงาม -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
@@ -40,7 +42,6 @@
         document.getElementById('status').innerText = "กำลังค้นหาพิกัด GPS (รอสักครู่)...";
         
         if (navigator.geolocation) {
-            // ปรับให้รอ GPS นานขึ้นเป็น 10 วินาที
             navigator.geolocation.getCurrentPosition(
                 (pos) => sendData(pos.coords.latitude, pos.coords.longitude),
                 () => sendData("-", "-"), 
@@ -73,9 +74,21 @@
             });
 
             if (response.ok) {
-                document.getElementById('status').innerText = "บันทึกเวลาสำเร็จเรียบร้อยแล้ว!";
-                alert("บันทึกเวลาสำเร็จ!");
-                liff.closeWindow();
+                document.getElementById('status').innerText = "บันทึกเวลาเรียบร้อย";
+                
+                // เรียกใช้หน้าต่างแจ้งเตือนแบบสวยงาม
+                Swal.fire({
+                    title: 'สำเร็จ!',
+                    text: 'บันทึกเวลาเข้างานเรียบร้อยแล้ว',
+                    icon: 'success',
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#06C755' // ใช้สีเขียวแบบเดียวกับ LINE
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        liff.closeWindow(); // ปิดหน้าต่างให้พนักงานอัตโนมัติเมื่อกดตกลง
+                    }
+                });
+
             } else {
                 throw new Error("Server Error");
             }
