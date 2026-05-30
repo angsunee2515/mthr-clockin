@@ -23,13 +23,15 @@
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
+    const today = new Date().toLocaleDateString('th-TH');
+
     async function initLiff() {
         try {
             await liff.init({ liffId: "2010214347-gbhKImBf" });
             if (!liff.isLoggedIn()) {
                 liff.login();
             } else {
-                autoClockIn();
+                checkDuplicateClockIn();
             }
         } catch (error) {
             document.getElementById('status').innerText = "System Error: โหลดระบบไม่ได้";
@@ -37,13 +39,35 @@
         }
     }
 
+    // ฟังก์ชันเช็คการกดซ้ำ
+    function checkDuplicateClockIn() {
+        const lastClockInDate = localStorage.getItem('lastClockInDate');
+        
+        if (lastClockInDate === today) {
+            document.getElementById('loading-spinner').style.display = 'none';
+            document.getElementById('status').innerText = "คุณลงเวลาของวันนี้ไปแล้ว";
+            Swal.fire({
+                title: 'ลงเวลาซ้ำ!',
+                text: 'คุณได้ลงเวลาเข้างานของวันนี้ไปแล้วค่ะ',
+                icon: 'warning',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#f39c12'
+            }).then(() => {
+                liff.closeWindow(); 
+            });
+        } else {
+            autoClockIn();
+        }
+    }
+
     function autoClockIn() {
         document.getElementById('status').innerText = "กำลังบันทึกเวลาและพิกัด...";
         if (navigator.geolocation) {
+            // ตั้งค่ารอ GPS 5 วินาที ตามที่คุณโบปรับไว้
             navigator.geolocation.getCurrentPosition(
                 (pos) => sendData(pos.coords.latitude, pos.coords.longitude),
                 () => sendData("-", "-"), 
-                { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 }
+                { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
             );
         } else {
             sendData("-", "-");
@@ -77,6 +101,9 @@
             });
 
             if (response.ok) {
+                // บันทึกความจำลงเครื่องว่าวันนี้กดแล้ว
+                localStorage.setItem('lastClockInDate', today);
+                
                 document.getElementById('status').innerText = "บันทึกสำเร็จ!";
                 document.getElementById('loading-spinner').style.display = 'none';
                 
