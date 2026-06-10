@@ -51,6 +51,15 @@
         <label for="reason">เหตุผลการลา:</label>
         <textarea id="reason" placeholder="ระบุเหตุผลการลา..." required></textarea>
 
+        <!-- เพิ่มช่องเลือกผู้อนุมัติตรงนี้ครับ -->
+        <label for="approver">เลือกผู้อนุมัติ:</label>
+        <select id="approver" required>
+            <option value="" disabled selected>-- เลือกหัวหน้างาน --</option>
+            <option value="ผู้จัดการ A">ผู้จัดการ A</option>
+            <option value="ผู้จัดการ B">ผู้จัดการ B</option>
+            <option value="ฝ่ายบุคคล">ฝ่ายบุคคล</option>
+        </select>
+
         <button type="submit" id="submitBtn">ส่งใบลา</button>
     </form>
 </div>
@@ -59,7 +68,6 @@
     let userName = "";
     let userId = "";
 
-    // ใส่ LIFF ID และ Webhook ที่คุณโบสร้างไว้แล้ว
     const LIFF_ID = "2010214347-3cJ4grN3"; 
     const WEBHOOK_URL = "https://hook.eu1.make.com/c4k3xn8vl8ryu5p82qjbwt2ht7xm1bhv"; 
 
@@ -97,6 +105,7 @@
             endDate: document.getElementById("endDate").value,
             totalDays: document.getElementById("totalDays").value,
             reason: document.getElementById("reason").value,
+            approver: document.getElementById("approver").value, // ดึงข้อมูลผู้อนุมัติ
             timestamp: new Date().toLocaleString('th-TH')
         };
 
