@@ -51,13 +51,13 @@
         <label for="reason">เหตุผลการลา:</label>
         <textarea id="reason" placeholder="ระบุเหตุผลการลา..." required></textarea>
 
-        <!-- เพิ่มช่องเลือกผู้อนุมัติตรงนี้ครับ -->
+        <!-- อัปเดตรายชื่อผู้อนุมัติเรียบร้อยครับ -->
         <label for="approver">เลือกผู้อนุมัติ:</label>
         <select id="approver" required>
-            <option value="" disabled selected>-- เลือกหัวหน้างาน --</option>
-            <option value="ผู้จัดการ A">ผู้จัดการ A</option>
-            <option value="ผู้จัดการ B">ผู้จัดการ B</option>
-            <option value="ฝ่ายบุคคล">ฝ่ายบุคคล</option>
+            <option value="" disabled selected>-- เลือกผู้อนุมัติ --</option>
+            <option value="คุณวรรณี">คุณวรรณี</option>
+            <option value="คุณสามารถ">คุณสามารถ</option>
+            <option value="HR">HR</option>
         </select>
 
         <button type="submit" id="submitBtn">ส่งใบลา</button>
@@ -105,7 +105,7 @@
             endDate: document.getElementById("endDate").value,
             totalDays: document.getElementById("totalDays").value,
             reason: document.getElementById("reason").value,
-            approver: document.getElementById("approver").value, // ดึงข้อมูลผู้อนุมัติ
+            approver: document.getElementById("approver").value, 
             timestamp: new Date().toLocaleString('th-TH')
         };
 
