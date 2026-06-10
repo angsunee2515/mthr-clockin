@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แบบฟอร์มใบลาออนไลน์</title>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f4f6f9; padding: 20px; color: #333; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        h2 { text-align: center; color: #06C755; margin-bottom: 20px; }
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; font-size: 14px; }
+        select, input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
+        textarea { resize: vertical; height: 80px; }
+        button { width: 100%; padding: 12px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        button:disabled { background-color: #a5d6a7; cursor: not-allowed; }
+        .profile-container { display: flex; align-items: center; margin-bottom: 20px; background: #e8f5e9; padding: 10px; border-radius: 10px; }
+        .profile-img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
+        .profile-name { font-weight: bold; font-size: 16px; color: #2e7d32; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+
+<div class="card">
+    <h2>ยื่นใบลาออนไลน์</h2>
+    
+    <div class="profile-container" id="profileBox" style="display: none;">
+        <img id="profileImg" class="profile-img" src="" alt="Profile">
+        <div class="profile-name" id="displayName">กำลังโหลดชื่อ...</div>
+    </div>
+
+    <form id="leaveForm">
+        <label for="leaveType">ประเภทการลา:</label>
+        <select id="leaveType" required>
+            <option value="" disabled selected>-- เลือกประเภทการลา --</option>
+            <option value="ลากิจ">ลากิจ</option>
+            <option value="ลาป่วย">ลาป่วย</option>
+            <option value="ลาพักร้อน">ลาพักร้อน</option>
+        </select>
+
+        <label for="startDate">วันที่เริ่มลา:</label>
+        <input type="date" id="startDate" required>
+
+        <label for="endDate">วันที่สิ้นสุดการลา:</label>
+        <input type="date" id="endDate" required>
+
+        <label for="totalDays">จำนวนวันลารวม (วัน):</label>
+        <input type="number" id="totalDays" step="0.5" min="0.5" placeholder="เช่น 1 หรือ 1.5" required>
+
+        <label for="reason">เหตุผลการลา:</label>
+        <textarea id="reason" placeholder="ระบุเหตุผลการลา..." required></textarea>
+
+        <button type="submit" id="submitBtn">ส่งใบลา</button>
+    </form>
+</div>
+
+<script>
+    let userName = "";
+    let userId = "";
+
+    // 1. ใส่ LIFF ID สำหรับหน้าใบลา (เดี๋ยวเราค่อยมาใส่กันครับ)
+    const LIFF_ID = "YOUR_LIFF_ID_HERE"; 
+    // 2. ใส่ Webhook URL ของ Make.com สำหรับใบลา (เดี๋ยวเราไปสร้างกันครับ)
+    const WEBHOOK_URL = "YOUR_WEBHOOK_URL_HERE"; 
+
+    async function initLiff() {
+        try {
+            await liff.init({ liffId: LIFF_ID });
+            if (liff.isLoggedIn()) {
+                const profile = await liff.getProfile();
+                userName = profile.displayName;
+                userId = profile.userId;
+                
+                document.getElementById('profileImg').src = profile.pictureUrl || 'https://via.placeholder.com/50';
+                document.getElementById('displayName').innerText = "คุณ " + userName;
+                document.getElementById('profileBox').style.display = "flex";
+            } else {
+                liff.login();
+            }
+        } catch (error) {
+            console.error("LIFF Init Error:", error);
+        }
+    }
+
+    document.getElementById("leaveForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const btn = document.getElementById("submitBtn");
+        btn.innerText = "กำลังส่งข้อมูล...";
+        btn.disabled = true;
+
+        const payload = {
+            userId: userId,
+            displayName: userName,
+            leaveType: document.getElementById("leaveType").value,
+            startDate: document.getElementById("startDate").value,
+            endDate: document.getElementById("endDate").value,
+            totalDays: document.getElementById("totalDays").value,
+            reason: document.getElementById("reason").value,
+            timestamp: new Date().toLocaleString('th-TH')
+        };
+
+        try {
+            const response = await fetch(WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                Swal.fire({ title: 'สำเร็จ!', text: 'ส่งใบลาเรียบร้อยแล้ว รอ HR อนุมัติผ่านไลน์นะคะ', icon: 'success', confirmButtonColor: '#06C755' })
+                .then(() => liff.closeWindow());
+            } else {
+                throw new Error("Network response was not ok");
+            }
+        } catch (error) {
+            Swal.fire('ข้อผิดพลาด!', 'ไม่สามารถส่งข้อมูลได้ กรุณาลองใหม่', 'error');
+            btn.innerText = "ส่งใบลา";
+            btn.disabled = false;
+        }
+    });
+
+    initLiff();
+</script>
+
+</body>
+</html>
