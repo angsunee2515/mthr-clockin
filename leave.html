@@ -31,6 +31,10 @@
     </div>
 
     <form id="leaveForm">
+        <!-- เพิ่มช่องกรอกรหัสพนักงานตรงนี้ครับ -->
+        <label for="employeeId">รหัสพนักงานประจำตัว:</label>
+        <input type="text" id="employeeId" placeholder="กรอกรหัสพนักงานของคุณ (เช่น EMP01)" required>
+
         <label for="leaveType">ประเภทการลา:</label>
         <select id="leaveType" required>
             <option value="" disabled selected>-- เลือกประเภทการลา --</option>
@@ -51,7 +55,6 @@
         <label for="reason">เหตุผลการลา:</label>
         <textarea id="reason" placeholder="ระบุเหตุผลการลา..." required></textarea>
 
-        <!-- อัปเดตรายชื่อผู้อนุมัติเรียบร้อยครับ -->
         <label for="approver">เลือกผู้อนุมัติ:</label>
         <select id="approver" required>
             <option value="" disabled selected>-- เลือกผู้อนุมัติ --</option>
@@ -100,6 +103,7 @@
         const payload = {
             userId: userId,
             displayName: userName,
+            employeeId: document.getElementById("employeeId").value, // ส่งรหัสพนักงานที่พิมพ์กรอกเข้ามา
             leaveType: document.getElementById("leaveType").value,
             startDate: document.getElementById("startDate").value,
             endDate: document.getElementById("endDate").value,
