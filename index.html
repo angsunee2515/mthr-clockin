@@ -2,39 +2,91 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบตอกบัตร</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>body{font-family:sans-serif; text-align:center; padding:20px;}</style>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f6f9; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        input { width: 80%; padding: 15px; font-size: 18px; margin: 15px 0; border: 2px solid #06C755; border-radius: 10px; box-sizing: border-box; text-align: center; }
+        .btn { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .btn:disabled { background-color: #ccc; }
+    </style>
 </head>
 <body>
-    <h2>ตอกบัตรเข้างาน</h2>
-    <input type="text" id="empId" placeholder="รหัสพนักงาน (04)" style="padding:10px; font-size:18px;">
-    <br><br>
-    <button onclick="sendData()" style="padding:15px 30px; background:#06C755; color:white; border:none; border-radius:20px; font-size:18px;">ส่งข้อมูลตอกบัตร</button>
+    <div class="card">
+        <h2 style="color: #06C755;">ตอกบัตรเข้างาน</h2>
+        <div id="profileName" style="margin-bottom: 15px; font-weight: bold; color: #333;">กำลังโหลดข้อมูล...</div>
+        <input type="text" id="empId" placeholder="รหัสพนักงาน (เช่น 04)" maxlength="2">
+        <br>
+        <button class="btn" id="submitBtn" onclick="processCheckIn()">กดเพื่อตอกบัตรเข้างาน</button>
+    </div>
 
 <script>
-    async function sendData() {
+    let profileData = {};
+    // ลิงก์ Webhook ล่าสุดของคุณโบ
+    const WEBHOOK_URL = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n"; 
+
+    async function init() {
         await liff.init({ liffId: "2010214347-gbhKImBf" });
-        const profile = await liff.getProfile();
-        const empId = document.getElementById("empId").value;
-        
+        if (liff.isLoggedIn()) {
+            profileData = await liff.getProfile();
+            document.getElementById("profileName").innerText = "คุณ: " + profileData.displayName;
+        } else {
+            liff.login();
+        }
+    }
+
+    function processCheckIn() {
+        const empId = document.getElementById("empId").value.trim();
+        if (!empId) { Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัสพนักงานค่ะ', 'warning'); return; }
+
+        const btn = document.getElementById("submitBtn");
+        btn.innerText = "กำลังตรวจพิกัด GPS..."; btn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                sendData(position.coords.latitude, position.coords.longitude, empId);
+            },
+            (error) => {
+                Swal.fire('ผิดพลาด', 'กรุณาเปิด GPS ในมือถือก่อนนะคะ', 'error');
+                btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
+            },
+            { enableHighAccuracy: true }
+        );
+    }
+
+    function sendData(lat, lon, empId) {
+        const btn = document.getElementById("submitBtn");
+        btn.innerText = "กำลังส่งข้อมูล...";
+
+        // ตัวแปรครบ 7 ตัวเป๊ะๆ ตามที่ Google Sheets รอรับ
         const payload = {
-            date: new Date().toLocaleDateString('th-TH'),
-            time: new Date().toLocaleTimeString('th-TH'),
-            displayName: profile.displayName,
+            userId: profileData.userId,
+            displayName: profileData.displayName,
             employeeId: "MT" + empId,
-            status: "เข้างาน"
+            status: "เข้างาน",
+            latitude: lat,
+            longitude: lon,
+            timestamp: new Date().toLocaleString('th-TH')
         };
 
-        fetch("https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n", {
+        fetch(WEBHOOK_URL, {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
-        }).then(() => {
-            Swal.fire('สำเร็จ!', 'ข้อมูลส่งไปแล้วค่ะ', 'success').then(() => liff.closeWindow());
+        }).then(response => {
+            if(response.ok) {
+                Swal.fire('สำเร็จ!', 'บันทึกเวลาและพิกัดเรียบร้อย', 'success').then(() => liff.closeWindow());
+            } else {
+                Swal.fire('ผิดพลาด', 'ส่งข้อมูลไม่สำเร็จ', 'error');
+                btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
+            }
         });
     }
+
+    init();
 </script>
 </body>
 </html>
