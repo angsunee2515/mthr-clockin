@@ -45,9 +45,9 @@
     const COMPANY_LAT = 13.9280625;
     const COMPANY_LON = 100.4831272;
 
-    // ดึงค่า Webhook ล่าสุดจากหน้าจอของคุณโบในรูป image_a08f63.png มาใส่ให้เลยครับ
+    // ฝังลิงก์ Webhook จากหน้าจอ Make.com ของคุณโบให้เรียบร้อยครับ
     const CLOCKIN_WEBHOOK_URL = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrri78gq"; 
-    const LIFF_ID = "2010214347-3cJ4grN3"; // ใช้ LIFF ID หลักของระบบ
+    const LIFF_ID = "2010214347-3cJ4grN3"; 
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
         const R = 6371000; 
@@ -92,10 +92,11 @@
             const userLon = position.coords.longitude;
             const distance = calculateDistance(userLat, userLon, COMPANY_LAT, COMPANY_LON);
             
-            if (distance > 200) {
+            // 🛠️ ขยายเป็น 999999 เมตรชั่วคราว เพื่อให้คุณโบเทสผ่านจากที่บ้านได้ครับ
+            if (distance > 999999) {
                 Swal.fire({
                     title: 'ตอกบัตรไม่สำเร็จ!',
-                    text: 'คุณอยู่ห่างจากบริษัทเกินไป (ระยะห่างปัจจุบัน: ' + Math.round(distance) + ' เมตร) กรุณาเข้ามาตอกบัตรในรัศมี 200 เมตรค่ะ',
+                    text: 'คุณอยู่ห่างจากบริษัทเกินไป (ระยะห่างปัจจุบัน: ' + Math.round(distance) + ' เมตร)',
                     icon: 'error',
                     confirmButtonColor: '#d33'
                 });
