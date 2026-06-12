@@ -6,13 +6,15 @@
     <title>ระบบตอกบัตรพนักงานออนไลน์</title>
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f4f6f9; padding: 20px; color: #333; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; text-align: center; }
-        h2 { color: #06C755; margin-bottom: 20px; }
-        .btn-checkin { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 50px; font-size: 18px; font-weight: bold; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(6, 199, 85, 0.3); }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        h2 { text-align: center; color: #06C755; margin-bottom: 20px; }
+        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; font-size: 14px; text-align: left; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; margin-bottom: 15px; }
+        .btn-checkin { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 50px; font-size: 18px; font-weight: bold; margin-top: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(6, 199, 85, 0.3); }
         .btn-checkin:disabled { background-color: #a5d6a7; cursor: not-allowed; }
         .profile-img { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 15px; display: block; object-fit: cover; border: 3px solid #06C755; }
-        .profile-name { font-weight: bold; font-size: 18px; color: #2e7d32; margin-bottom: 5px; }
-        .status-text { font-size: 14px; color: #666; margin-bottom: 20px; }
+        .profile-name { font-weight: bold; font-size: 18px; color: #2e7d32; text-align: center; margin-bottom: 5px; }
+        .status-text { font-size: 14px; color: #666; text-align: center; margin-bottom: 20px; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -28,24 +30,27 @@
         <div class="status-text" id="gpsStatus">📡 กำลังตรวจสอบสัญญาณ GPS...</div>
     </div>
 
-    <button class="btn-checkin" id="checkinBtn" onclick="processCheckIn()" disabled>กดเพื่อตอกบัตรเข้างาน</button>
+    <form id="clockInForm" onsubmit="event.preventDefault(); processCheckIn();">
+        <label for="employeeId">รหัสพนักงานประจำตัว:</label>
+        <input type="text" id="employeeId" placeholder="กรอกรหัสพนักงานของคุณ" required>
+        
+        <button type="submit" class="btn-checkin" id="checkinBtn" disabled>กดเพื่อตอกบัตรเข้างาน</button>
+    </form>
 </div>
 
 <script>
     let userName = "";
     let userId = "";
     
-    // 📍 ใส่พิกัดบริษัทของคุณโบที่ล็อกไว้
     const COMPANY_LAT = 13.9280625;
     const COMPANY_LON = 100.4831272;
 
-    // 🔑 อย่าลืมเปลี่ยนรหัส LIFF ID และ Webhook URL ของฝั่งตอกบัตรนะครับ
-    const LIFF_ID = "ใส่รหัส_LIFF_ID_ของหน้าตอกบัตรตรงนี้"; 
-    const CLOCKIN_WEBHOOK_URL = "ใส่ลิงก์_Webhook_Makeของตอกบัตรตรงนี้"; 
+    // ดึงค่า Webhook ล่าสุดจากหน้าจอของคุณโบในรูป image_a08f63.png มาใส่ให้เลยครับ
+    const CLOCKIN_WEBHOOK_URL = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrri78gq"; 
+    const LIFF_ID = "2010214347-3cJ4grN3"; // ใช้ LIFF ID หลักของระบบ
 
-    // ฟังก์ชันคำนวณระยะห่างทางดาวเทียม (หน่วยเป็นเมตร)
     function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000; // รัศมีโลก
+        const R = 6371000; 
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
         const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -67,7 +72,6 @@
                 document.getElementById('displayName').innerText = "คุณ " + userName;
                 document.getElementById('profileBox').style.display = "block";
                 
-                // เปิดให้กดปุ่มหลังจากโหลดข้อมูล LINE สำเร็จ
                 document.getElementById('checkinBtn').disabled = false;
                 document.getElementById('gpsStatus').innerText = "📌 สัญญาณ GPS พร้อมใช้งาน";
             } else {
@@ -75,25 +79,19 @@
             }
         } catch (error) {
             console.error("LIFF Init Error:", error);
-            Swal.fire('ระบบผิดพลาด', 'ไม่สามารถเชื่อมต่อ LINE ได้', 'error');
         }
     }
 
-    // ฟังก์ชันหลักเมื่อพนักงานกดปุ่มตอกบัตร
     function processCheckIn() {
         const btn = document.getElementById("checkinBtn");
         btn.innerText = "กำลังตรวจพิกัด...";
         btn.disabled = true;
 
-        // เรียกเปิด GPS มือถือ
         navigator.geolocation.getCurrentPosition(async function(position) {
             const userLat = position.coords.latitude;
             const userLon = position.coords.longitude;
-            
-            // คำนวณระยะห่าง
             const distance = calculateDistance(userLat, userLon, COMPANY_LAT, COMPANY_LON);
             
-            // 🚫 ตรวจสอบเงื่อนไขระยะ 200 เมตร
             if (distance > 200) {
                 Swal.fire({
                     title: 'ตอกบัตรไม่สำเร็จ!',
@@ -104,21 +102,20 @@
                 btn.innerText = "กดเพื่อตอกบัตรเข้างาน";
                 btn.disabled = false;
             } else {
-                //  อยู่ในระยะส่งข้อมูลไป Make.com ทันที
                 sendDataToMake(userLat, userLon);
             }
         }, function(error) {
-            Swal.fire('ตอกบัตรล้มเหลว', 'กรุณาเปิดสิทธิ์เข้าถึงตำแหน่ง (Location/GPS) บนมือถือของคุณก่อนตอกบัตรนะคะ', 'error');
+            Swal.fire('ตอกบัตรล้มเหลว', 'กรุณาเปิดสิทธิ์เข้าถึงตำแหน่ง (Location/GPS) บนมือถือของคุณก่อนนะคะ', 'error');
             btn.innerText = "กดเพื่อตอกบัตรเข้างาน";
             btn.disabled = false;
         }, { enableHighAccuracy: true, timeout: 5000 });
     }
 
-    // ส่งข้อมูลเข้า Make.com และบันทึกลง Google Sheets
     async function sendDataToMake(lat, lon) {
         const payload = {
             userId: userId,
             displayName: userName,
+            employeeId: document.getElementById("employeeId").value,
             status: "เข้างาน",
             latitude: lat,
             longitude: lon,
@@ -133,13 +130,13 @@
             });
 
             if (response.ok) {
-                Swal.fire({ title: 'ตอกบัตรสำเร็จ!', text: 'ยินดีต้อนรับเข้าสู่การทำงานวันนี้ค่ะ', icon: 'success', confirmButtonColor: '#06C755' })
+                Swal.fire({ title: 'ตอกบัตรสำเร็จ!', text: 'บันทึกเวลาเข้างานเรียบร้อยแล้วค่ะ', icon: 'success', confirmButtonColor: '#06C755' })
                 .then(() => liff.closeWindow());
             } else {
                 throw new Error("Network response error");
             }
         } catch (error) {
-            Swal.fire('ข้อผิดพลาด!', 'ไม่สามารถส่งยอดเข้างานได้ กรุณาลองใหม่', 'error');
+            Swal.fire('ข้อผิดพลาด!', 'ไม่สามารถส่งข้อมูลได้ กรุณาลองใหม่', 'error');
             document.getElementById("checkinBtn").innerText = "กดเพื่อตอกบัตรเข้างาน";
             document.getElementById("checkinBtn").disabled = false;
         }
@@ -147,6 +144,5 @@
 
     initLiff();
 </script>
-
 </body>
 </html>
