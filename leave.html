@@ -65,16 +65,13 @@
     const LIFF_ID = "2010214347-3cJ4grN3"; 
     const WEBHOOK_URL = "https://hook.eu1.make.com/c4k3xn8vl8ryu5p82qjbwt2ht7xm1bhv"; 
 
-    // ฟังก์ชันล็อกปฏิทินห้ามเลือกวันย้อนหลัง
     function lockPastDates() {
         const today = new Date();
         const yyyy = today.getFullYear();
         let mm = today.getMonth() + 1;
         let dd = today.getDate();
-
         if (dd < 10) dd = '0' + dd;
         if (mm < 10) mm = '0' + mm;
-
         const formattedToday = yyyy + '-' + mm + '-' + dd;
         document.getElementById('startDate').min = formattedToday;
         document.getElementById('endDate').min = formattedToday;
@@ -91,7 +88,7 @@
                 document.getElementById('profileImg').src = profile.pictureUrl || 'https://via.placeholder.com/50';
                 document.getElementById('displayName').innerText = "คุณ " + userName;
                 document.getElementById('profileBox').style.display = "flex";
-                lockPastDates(); // เรียกใช้งานการล็อกวันที่
+                lockPastDates(); 
             } else {
                 liff.login();
             }
@@ -141,6 +138,5 @@
 
     initLiff();
 </script>
-
 </body>
 </html>
