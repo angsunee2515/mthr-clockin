@@ -31,9 +31,8 @@
     </div>
 
     <form id="leaveForm">
-        <!-- เพิ่มช่องกรอกรหัสพนักงานตรงนี้ครับ -->
         <label for="employeeId">รหัสพนักงานประจำตัว:</label>
-        <input type="text" id="employeeId" placeholder="กรอกรหัสพนักงานของคุณ (เช่น EMP01)" required>
+        <input type="text" id="employeeId" placeholder="กรอกรหัสพนักงานของคุณ" required>
 
         <label for="leaveType">ประเภทการลา:</label>
         <select id="leaveType" required>
@@ -55,14 +54,6 @@
         <label for="reason">เหตุผลการลา:</label>
         <textarea id="reason" placeholder="ระบุเหตุผลการลา..." required></textarea>
 
-        <label for="approver">เลือกผู้อนุมัติ:</label>
-        <select id="approver" required>
-            <option value="" disabled selected>-- เลือกผู้อนุมัติ --</option>
-            <option value="คุณวรรณี">คุณวรรณี</option>
-            <option value="คุณสามารถ">คุณสามารถ</option>
-            <option value="HR">HR</option>
-        </select>
-
         <button type="submit" id="submitBtn">ส่งใบลา</button>
     </form>
 </div>
@@ -73,6 +64,21 @@
 
     const LIFF_ID = "2010214347-3cJ4grN3"; 
     const WEBHOOK_URL = "https://hook.eu1.make.com/c4k3xn8vl8ryu5p82qjbwt2ht7xm1bhv"; 
+
+    // ฟังก์ชันล็อกปฏิทินห้ามเลือกวันย้อนหลัง
+    function lockPastDates() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        let mm = today.getMonth() + 1;
+        let dd = today.getDate();
+
+        if (dd < 10) dd = '0' + dd;
+        if (mm < 10) mm = '0' + mm;
+
+        const formattedToday = yyyy + '-' + mm + '-' + dd;
+        document.getElementById('startDate').min = formattedToday;
+        document.getElementById('endDate').min = formattedToday;
+    }
 
     async function initLiff() {
         try {
@@ -85,6 +91,7 @@
                 document.getElementById('profileImg').src = profile.pictureUrl || 'https://via.placeholder.com/50';
                 document.getElementById('displayName').innerText = "คุณ " + userName;
                 document.getElementById('profileBox').style.display = "flex";
+                lockPastDates(); // เรียกใช้งานการล็อกวันที่
             } else {
                 liff.login();
             }
@@ -103,13 +110,12 @@
         const payload = {
             userId: userId,
             displayName: userName,
-            employeeId: document.getElementById("employeeId").value, // ส่งรหัสพนักงานที่พิมพ์กรอกเข้ามา
+            employeeId: document.getElementById("employeeId").value,
             leaveType: document.getElementById("leaveType").value,
             startDate: document.getElementById("startDate").value,
             endDate: document.getElementById("endDate").value,
             totalDays: document.getElementById("totalDays").value,
             reason: document.getElementById("reason").value,
-            approver: document.getElementById("approver").value, 
             timestamp: new Date().toLocaleString('th-TH')
         };
 
@@ -121,7 +127,7 @@
             });
 
             if (response.ok) {
-                Swal.fire({ title: 'สำเร็จ!', text: 'ส่งใบลาเรียบร้อยแล้ว รอ HR อนุมัติผ่านไลน์นะคะ', icon: 'success', confirmButtonColor: '#06C755' })
+                Swal.fire({ title: 'สำเร็จ!', text: 'ส่งใบลาเรียบร้อยแล้ว รอการอนุมัติผ่านไลน์นะคะ', icon: 'success', confirmButtonColor: '#06C755' })
                 .then(() => liff.closeWindow());
             } else {
                 throw new Error("Network response was not ok");
