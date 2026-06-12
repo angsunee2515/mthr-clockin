@@ -25,8 +25,12 @@
 
 <script>
     let profileData = {};
-    // ลิงก์ Webhook ล่าสุดของคุณโบ
     const WEBHOOK_URL = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n"; 
+    
+    // --- ตั้งค่าพิกัดบริษัท ---
+    const COMPANY_LAT = 13.9280625; 
+    const COMPANY_LON = 100.4831272;
+    const MAX_DISTANCE = 100; // อนุญาตให้ห่างได้ไม่เกิน 100 เมตร
 
     async function init() {
         await liff.init({ liffId: "2010214347-gbhKImBf" });
@@ -38,16 +42,44 @@
         }
     }
 
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; 
+        const φ1 = lat1 * Math.PI/180;
+        const φ2 = lat2 * Math.PI/180;
+        const Δφ = (lat2-lat1) * Math.PI/180;
+        const Δλ = (lon2-lon1) * Math.PI/180;
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c; 
+    }
+
     function processCheckIn() {
         const empId = document.getElementById("empId").value.trim();
         if (!empId) { Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัสพนักงานค่ะ', 'warning'); return; }
+
+        // เช็คห้ามตอกซ้ำในวันเดียวกัน
+        const today = new Date().toLocaleDateString('th-TH');
+        const lastCheckIn = localStorage.getItem("lastCheckIn_" + empId);
+        if (lastCheckIn === today) {
+            Swal.fire('แจ้งเตือน', 'วันนี้คุณตอกบัตรเข้างานไปแล้วค่ะ!', 'warning');
+            return;
+        }
 
         const btn = document.getElementById("submitBtn");
         btn.innerText = "กำลังตรวจพิกัด GPS..."; btn.disabled = true;
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                sendData(position.coords.latitude, position.coords.longitude, empId);
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const distance = calculateDistance(lat, lon, COMPANY_LAT, COMPANY_LON);
+                
+                if (distance > MAX_DISTANCE) {
+                    Swal.fire('อยู่นอกพื้นที่', `คุณอยู่ห่างจากออฟฟิศ ${Math.round(distance)} เมตร (ต้องอยู่ในระยะ ${MAX_DISTANCE}ม.)`, 'error');
+                    btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
+                } else {
+                    sendData(lat, lon, empId, today);
+                }
             },
             (error) => {
                 Swal.fire('ผิดพลาด', 'กรุณาเปิด GPS ในมือถือก่อนนะคะ', 'error');
@@ -57,28 +89,18 @@
         );
     }
 
-    function sendData(lat, lon, empId) {
+    function sendData(lat, lon, empId, today) {
         const btn = document.getElementById("submitBtn");
         btn.innerText = "กำลังส่งข้อมูล...";
 
-        // ตัวแปรครบ 7 ตัวเป๊ะๆ ตามที่ Google Sheets รอรับ
-        const payload = {
-            userId: profileData.userId,
-            displayName: profileData.displayName,
-            employeeId: "MT" + empId,
-            status: "เข้างาน",
-            latitude: lat,
-            longitude: lon,
-            timestamp: new Date().toLocaleString('th-TH')
-        };
+        const payload = { userId: profileData.userId, displayName: profileData.displayName, employeeId: "MT" + empId, status: "เข้างาน", latitude: lat, longitude: lon, timestamp: new Date().toLocaleString('th-TH') };
 
         fetch(WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
         }).then(response => {
             if(response.ok) {
-                Swal.fire('สำเร็จ!', 'บันทึกเวลาและพิกัดเรียบร้อย', 'success').then(() => liff.closeWindow());
+                localStorage.setItem("lastCheckIn_" + empId, today); // บันทึกว่าวันนี้ตอกแล้ว
+                Swal.fire('สำเร็จ!', 'บันทึกเวลาเรียบร้อย', 'success').then(() => liff.closeWindow());
             } else {
                 Swal.fire('ผิดพลาด', 'ส่งข้อมูลไม่สำเร็จ', 'error');
                 btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
