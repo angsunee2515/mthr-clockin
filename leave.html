@@ -31,8 +31,8 @@
     </div>
 
     <form id="leaveForm">
-        <label for="employeeId">รหัสพนักงานประจำตัว:</label>
-        <input type="text" id="employeeId" placeholder="กรอกรหัสพนักงานของคุณ" required>
+        <label for="employeeId">รหัสพนักงาน (กรอกเฉพาะตัวเลข 2 ตัว):</label>
+        <input type="text" id="employeeId" placeholder="เช่น 01 หรือ 12" required pattern="[0-9]{2}" title="กรุณากรอกตัวเลข 2 ตัวค่ะ">
 
         <label for="leaveType">ประเภทการลา:</label>
         <select id="leaveType" required>
@@ -61,6 +61,9 @@
 <script>
     let userName = "";
     let userId = "";
+
+    // 🏷️ เปลี่ยนรหัสคำนำหน้าเป็น MT เรียบร้อยค่ะ
+    const PREFIX = "MT";
 
     const LIFF_ID = "2010214347-3cJ4grN3"; 
     const WEBHOOK_URL = "https://hook.eu1.make.com/c4k3xn8vl8ryu5p82qjbwt2ht7xm1bhv"; 
@@ -104,10 +107,13 @@
         btn.innerText = "กำลังส่งข้อมูล...";
         btn.disabled = true;
 
+        const rawInput = document.getElementById("employeeId").value.trim();
+        const fullEmployeeId = PREFIX + rawInput;
+
         const payload = {
             userId: userId,
             displayName: userName,
-            employeeId: document.getElementById("employeeId").value,
+            employeeId: fullEmployeeId, 
             leaveType: document.getElementById("leaveType").value,
             startDate: document.getElementById("startDate").value,
             endDate: document.getElementById("endDate").value,
@@ -124,7 +130,7 @@
             });
 
             if (response.ok) {
-                Swal.fire({ title: 'สำเร็จ!', text: 'ส่งใบลาเรียบร้อยแล้ว รอการอนุมัติผ่านไลน์นะคะ', icon: 'success', confirmButtonColor: '#06C755' })
+                Swal.fire({ title: 'สำเร็จ!', text: 'ส่งใบลาของรหัส ' + fullEmployeeId + ' เรียบร้อยแล้วค่ะ', icon: 'success', confirmButtonColor: '#06C755' })
                 .then(() => liff.closeWindow());
             } else {
                 throw new Error("Network response was not ok");
