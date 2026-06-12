@@ -3,126 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MT HR Clock-In</title>
+    <title>ระบบตอกบัตรพนักงานออนไลน์</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px 20px; background-color: #f4f6f9; color: #333; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        #status { font-size: 18px; font-weight: bold; color: #06C755; margin-top: 20px;}
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #06C755; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f4f6f9; padding: 20px; color: #333; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; text-align: center; }
+        h2 { color: #06C755; margin-bottom: 20px; }
+        .btn-checkin { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 50px; font-size: 18px; font-weight: bold; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 10px rgba(6, 199, 85, 0.3); }
+        .btn-checkin:disabled { background-color: #a5d6a7; cursor: not-allowed; }
+        .profile-img { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 15px; display: block; object-fit: cover; border: 3px solid #06C755; }
+        .profile-name { font-weight: bold; font-size: 18px; color: #2e7d32; margin-bottom: 5px; }
+        .status-text { font-size: 14px; color: #666; margin-bottom: 20px; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
 
 <div class="card">
-    <h2>MT HR Connect</h2>
-    <div id="loading-spinner" class="loader"></div>
-    <p id="status">กำลังเข้าสู่ระบบ...</p>
+    <h2>ตอกบัตรเข้า-ออกงาน</h2>
+    
+    <div id="profileBox" style="display: none;">
+        <img id="profileImg" class="profile-img" src="" alt="Profile">
+        <div class="profile-name" id="displayName">กำลังโหลดชื่อ...</div>
+        <div class="status-text" id="gpsStatus">📡 กำลังตรวจสอบสัญญาณ GPS...</div>
+    </div>
+
+    <button class="btn-checkin" id="checkinBtn" onclick="processCheckIn()" disabled>กดเพื่อตอกบัตรเข้างาน</button>
 </div>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
-    const today = new Date().toLocaleDateString('th-TH');
+    let userName = "";
+    let userId = "";
+    
+    // 📍 ใส่พิกัดบริษัทของคุณโบที่ล็อกไว้
+    const COMPANY_LAT = 13.9280625;
+    const COMPANY_LON = 100.4831272;
+
+    // 🔑 อย่าลืมเปลี่ยนรหัส LIFF ID และ Webhook URL ของฝั่งตอกบัตรนะครับ
+    const LIFF_ID = "ใส่รหัส_LIFF_ID_ของหน้าตอกบัตรตรงนี้"; 
+    const CLOCKIN_WEBHOOK_URL = "ใส่ลิงก์_Webhook_Makeของตอกบัตรตรงนี้"; 
+
+    // ฟังก์ชันคำนวณระยะห่างทางดาวเทียม (หน่วยเป็นเมตร)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371000; // รัศมีโลก
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; 
+    }
 
     async function initLiff() {
         try {
-            await liff.init({ liffId: "2010214347-gbhKImBf" });
-            if (!liff.isLoggedIn()) {
-                liff.login();
+            await liff.init({ liffId: LIFF_ID });
+            if (liff.isLoggedIn()) {
+                const profile = await liff.getProfile();
+                userName = profile.displayName;
+                userId = profile.userId;
+                
+                document.getElementById('profileImg').src = profile.pictureUrl || 'https://via.placeholder.com/80';
+                document.getElementById('displayName').innerText = "คุณ " + userName;
+                document.getElementById('profileBox').style.display = "block";
+                
+                // เปิดให้กดปุ่มหลังจากโหลดข้อมูล LINE สำเร็จ
+                document.getElementById('checkinBtn').disabled = false;
+                document.getElementById('gpsStatus').innerText = "📌 สัญญาณ GPS พร้อมใช้งาน";
             } else {
-                checkDuplicateClockIn();
+                liff.login();
             }
         } catch (error) {
-            document.getElementById('status').innerText = "System Error: โหลดระบบไม่ได้";
-            document.getElementById('loading-spinner').style.display = 'none';
+            console.error("LIFF Init Error:", error);
+            Swal.fire('ระบบผิดพลาด', 'ไม่สามารถเชื่อมต่อ LINE ได้', 'error');
         }
     }
 
-    // ฟังก์ชันเช็คการกดซ้ำ
-    function checkDuplicateClockIn() {
-        const lastClockInDate = localStorage.getItem('lastClockInDate');
-        
-        if (lastClockInDate === today) {
-            document.getElementById('loading-spinner').style.display = 'none';
-            document.getElementById('status').innerText = "คุณลงเวลาของวันนี้ไปแล้ว";
-            Swal.fire({
-                title: 'ลงเวลาซ้ำ!',
-                text: 'คุณได้ลงเวลาเข้างานของวันนี้ไปแล้วค่ะ',
-                icon: 'warning',
-                confirmButtonText: 'ตกลง',
-                confirmButtonColor: '#f39c12'
-            }).then(() => {
-                liff.closeWindow(); 
-            });
-        } else {
-            autoClockIn();
-        }
-    }
+    // ฟังก์ชันหลักเมื่อพนักงานกดปุ่มตอกบัตร
+    function processCheckIn() {
+        const btn = document.getElementById("checkinBtn");
+        btn.innerText = "กำลังตรวจพิกัด...";
+        btn.disabled = true;
 
-    function autoClockIn() {
-        document.getElementById('status').innerText = "กำลังบันทึกเวลาและพิกัด...";
-        if (navigator.geolocation) {
-            // ตั้งค่ารอ GPS 5 วินาที ตามที่คุณโบปรับไว้
-            navigator.geolocation.getCurrentPosition(
-                (pos) => sendData(pos.coords.latitude, pos.coords.longitude),
-                () => sendData("-", "-"), 
-                { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-            );
-        } else {
-            sendData("-", "-");
-        }
-    }
-
-    async function sendData(lat, lng) {
-        try {
-            const profile = await liff.getProfile();
+        // เรียกเปิด GPS มือถือ
+        navigator.geolocation.getCurrentPosition(async function(position) {
+            const userLat = position.coords.latitude;
+            const userLon = position.coords.longitude;
             
-            const now = new Date();
-            const currentDate = now.toLocaleDateString('th-TH');
-            const currentTime = now.toLocaleTimeString('th-TH');
+            // คำนวณระยะห่าง
+            const distance = calculateDistance(userLat, userLon, COMPANY_LAT, COMPANY_LON);
+            
+            // 🚫 ตรวจสอบเงื่อนไขระยะ 200 เมตร
+            if (distance > 200) {
+                Swal.fire({
+                    title: 'ตอกบัตรไม่สำเร็จ!',
+                    text: 'คุณอยู่ห่างจากบริษัทเกินไป (ระยะห่างปัจจุบัน: ' + Math.round(distance) + ' เมตร) กรุณาเข้ามาตอกบัตรในรัศมี 200 เมตรค่ะ',
+                    icon: 'error',
+                    confirmButtonColor: '#d33'
+                });
+                btn.innerText = "กดเพื่อตอกบัตรเข้างาน";
+                btn.disabled = false;
+            } else {
+                //  อยู่ในระยะส่งข้อมูลไป Make.com ทันที
+                sendDataToMake(userLat, userLon);
+            }
+        }, function(error) {
+            Swal.fire('ตอกบัตรล้มเหลว', 'กรุณาเปิดสิทธิ์เข้าถึงตำแหน่ง (Location/GPS) บนมือถือของคุณก่อนตอกบัตรนะคะ', 'error');
+            btn.innerText = "กดเพื่อตอกบัตรเข้างาน";
+            btn.disabled = false;
+        }, { enableHighAccuracy: true, timeout: 5000 });
+    }
 
-            const payload = {
-                userId: profile.userId,
-                displayName: profile.displayName,
-                pictureUrl: profile.pictureUrl,
-                latitude: lat,
-                longitude: lng,
-                date: currentDate,
-                time: currentTime
-            };
+    // ส่งข้อมูลเข้า Make.com และบันทึกลง Google Sheets
+    async function sendDataToMake(lat, lon) {
+        const payload = {
+            userId: userId,
+            displayName: userName,
+            status: "เข้างาน",
+            latitude: lat,
+            longitude: lon,
+            timestamp: new Date().toLocaleString('th-TH')
+        };
 
-            const webhookUrl = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n";
-
-            const response = await fetch(webhookUrl, {
+        try {
+            const response = await fetch(CLOCKIN_WEBHOOK_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                // บันทึกความจำลงเครื่องว่าวันนี้กดแล้ว
-                localStorage.setItem('lastClockInDate', today);
-                
-                document.getElementById('status').innerText = "บันทึกสำเร็จ!";
-                document.getElementById('loading-spinner').style.display = 'none';
-                
-                Swal.fire({
-                    title: 'สำเร็จ!',
-                    text: 'บันทึกเวลาเข้างานเรียบร้อย',
-                    icon: 'success',
-                    showConfirmButton: false,
-                    timer: 2000
-                }).then(() => {
-                    liff.closeWindow();
-                });
-
+                Swal.fire({ title: 'ตอกบัตรสำเร็จ!', text: 'ยินดีต้อนรับเข้าสู่การทำงานวันนี้ค่ะ', icon: 'success', confirmButtonColor: '#06C755' })
+                .then(() => liff.closeWindow());
             } else {
-                throw new Error("Server Error");
+                throw new Error("Network response error");
             }
         } catch (error) {
-            document.getElementById('status').innerText = "ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่";
-            document.getElementById('loading-spinner').style.display = 'none';
+            Swal.fire('ข้อผิดพลาด!', 'ไม่สามารถส่งยอดเข้างานได้ กรุณาลองใหม่', 'error');
+            document.getElementById("checkinBtn").innerText = "กดเพื่อตอกบัตรเข้างาน";
+            document.getElementById("checkinBtn").disabled = false;
         }
     }
 
