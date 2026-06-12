@@ -2,83 +2,39 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบตอกบัตรพนักงานออนไลน์</title>
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f4f6f9; padding: 20px; color: #333; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        h2 { text-align: center; color: #06C755; margin-bottom: 20px; }
-        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; font-size: 14px; text-align: left; }
-        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; margin-bottom: 15px; }
-        .btn-checkin { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 50px; font-size: 18px; font-weight: bold; margin-top: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(6, 199, 85, 0.3); }
-        .btn-checkin:disabled { background-color: #a5d6a7; cursor: not-allowed; }
-        .profile-img { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 15px; display: block; object-fit: cover; border: 3px solid #06C755; }
-        .profile-name { font-weight: bold; font-size: 18px; color: #2e7d32; text-align: center; margin-bottom: 5px; }
-        .status-text { font-size: 14px; color: #666; text-align: center; margin-bottom: 20px; }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>ระบบตอกบัตร</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>body{font-family:sans-serif; text-align:center; padding:20px;}</style>
 </head>
 <body>
-<div class="card">
-    <h2>ตอกบัตรเข้า-ออกงาน</h2>
-    <div id="profileBox" style="display: none;">
-        <img id="profileImg" class="profile-img" src="" alt="Profile">
-        <div class="profile-name" id="displayName">กำลังโหลดชื่อ...</div>
-        <div class="status-text" id="gpsStatus">📡 กำลังตรวจสอบสัญญาณ GPS...</div>
-    </div>
-    <form id="clockInForm" onsubmit="event.preventDefault(); processCheckIn();">
-        <label for="employeeId">รหัสพนักงาน (กรอกเฉพาะตัวเลข 2 ตัว):</label>
-        <input type="text" id="employeeId" placeholder="เช่น 01 หรือ 12" required pattern="[0-9]{2}" title="กรุณากรอกตัวเลข 2 ตัวค่ะ">
-        <button type="submit" class="btn-checkin" id="checkinBtn" disabled>กดเพื่อตอกบัตรเข้างาน</button>
-    </form>
-</div>
+    <h2>ตอกบัตรเข้างาน</h2>
+    <input type="text" id="empId" placeholder="รหัสพนักงาน (04)" style="padding:10px; font-size:18px;">
+    <br><br>
+    <button onclick="sendData()" style="padding:15px 30px; background:#06C755; color:white; border:none; border-radius:20px; font-size:18px;">ส่งข้อมูลตอกบัตร</button>
+
 <script>
-    let userName = ""; let userId = "";
-    const PREFIX = "MT";
-    const COMPANY_LAT = 13.9280625; const COMPANY_LON = 100.4831272;
-    const CLOCKIN_WEBHOOK_URL = "https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n"; 
-    const LIFF_ID = "2010214347-gbhKImBf"; 
+    async function sendData() {
+        await liff.init({ liffId: "2010214347-gbhKImBf" });
+        const profile = await liff.getProfile();
+        const empId = document.getElementById("empId").value;
+        
+        const payload = {
+            date: new Date().toLocaleDateString('th-TH'),
+            time: new Date().toLocaleTimeString('th-TH'),
+            displayName: profile.displayName,
+            employeeId: "MT" + empId,
+            status: "เข้างาน"
+        };
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000; 
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        fetch("https://hook.eu1.make.com/5rax8wzcpb4abo8f1l9s06edxrrij92n", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        }).then(() => {
+            Swal.fire('สำเร็จ!', 'ข้อมูลส่งไปแล้วค่ะ', 'success').then(() => liff.closeWindow());
+        });
     }
-
-    async function initLiff() {
-        try { await liff.init({ liffId: LIFF_ID });
-            if (liff.isLoggedIn()) { const profile = await liff.getProfile(); userName = profile.displayName; userId = profile.userId;
-                document.getElementById('profileImg').src = profile.pictureUrl || 'https://via.placeholder.com/80';
-                document.getElementById('displayName').innerText = "คุณ " + userName;
-                document.getElementById('profileBox').style.display = "block";
-                document.getElementById('checkinBtn').disabled = false;
-                document.getElementById('gpsStatus').innerText = "📌 สัญญาณ GPS พร้อมใช้งาน";
-            } else { liff.login(); }
-        } catch (error) { console.error(error); }
-    }
-
-    function processCheckIn() {
-        const btn = document.getElementById("checkinBtn");
-        btn.innerText = "กำลังตรวจพิกัด..."; btn.disabled = true;
-        navigator.geolocation.getCurrentPosition(async function(pos) {
-            const distance = calculateDistance(pos.coords.latitude, pos.coords.longitude, COMPANY_LAT, COMPANY_LON);
-            if (distance > 999999) { Swal.fire('ไม่สำเร็จ', 'อยู่นอกพื้นที่', 'error'); btn.innerText = "กดตอกบัตร"; btn.disabled = false; }
-            else { sendData(pos.coords.latitude, pos.coords.longitude); }
-        }, () => { Swal.fire('ผิดพลาด', 'กรุณาเปิด GPS', 'error'); btn.disabled = false; }, { enableHighAccuracy: true });
-    }
-
-    async function sendData(lat, lon) {
-        const payload = { userId: userId, displayName: userName, employeeId: PREFIX + document.getElementById("employeeId").value.trim(), status: "เข้างาน", latitude: lat, longitude: lon, timestamp: new Date().toLocaleString('th-TH') };
-        try {
-            const res = await fetch(CLOCKIN_WEBHOOK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            if (res.ok) { Swal.fire('สำเร็จ', 'บันทึกเรียบร้อย', 'success').then(() => liff.closeWindow()); }
-            else { throw new Error(); }
-        } catch (e) { Swal.fire('ผิดพลาด', 'ส่งข้อมูลไม่ไป', 'error'); document.getElementById("checkinBtn").disabled = false; }
-    }
-    initLiff();
 </script>
 </body>
 </html>
