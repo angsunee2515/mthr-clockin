@@ -2,111 +2,63 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบตอกบัตร</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f6f9; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        input { width: 80%; padding: 15px; font-size: 18px; margin: 15px 0; border: 2px solid #06C755; border-radius: 10px; box-sizing: border-box; text-align: center; }
-        .btn { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .btn:disabled { background-color: #ccc; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; }
+        .card { max-width: 400px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 10px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; }
+        .btn { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 5px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 style="color: #06C755;">ตอกบัตรเข้างาน</h2>
-        <div id="profileName" style="margin-bottom: 15px; font-weight: bold; color: #333;">กำลังโหลดข้อมูล...</div>
-        <input type="text" id="empId" placeholder="รหัสพนักงาน (เช่น 04)" maxlength="2">
-        <br>
-        <button class="btn" id="submitBtn" onclick="processCheckIn()">กดเพื่อตอกบัตรเข้างาน</button>
+        <h2>ตอกบัตรเข้างาน</h2>
+        <input type="text" id="empId" placeholder="รหัสพนักงาน" maxlength="2">
+        <button class="btn" id="submitBtn" onclick="process()">กดเพื่อตอกบัตร</button>
     </div>
 
 <script>
-    let profileData = {};
-    const WEBHOOK_URL = "https://kitty-rendering-tranquil.ngrok-free.dev/webhook/ee5ba937-ff47-4b4d-8214-bfc64d91552f";
-    
-    const COMPANY_LAT = 13.9280625; 
-    const COMPANY_LON = 100.4831272;
-    const MAX_DISTANCE = 100; 
+    // ส่งตรงเข้าเซิร์ฟเวอร์ n8n ไม่ต้องผ่าน ngrok
+    const WEBHOOK_URL = "http://217.15.166.151:5678/webhook-test/ee5ba937-ff47-4b4d-8214-bfc64d91552f";
 
-    async function init() {
-        await liff.init({ liffId: "2010214347-gbhKImBf" });
-        if (liff.isLoggedIn()) {
-            profileData = await liff.getProfile();
-            document.getElementById("profileName").innerText = "คุณ: " + profileData.displayName;
-        } else {
-            liff.login();
-        }
-    }
-
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; 
-        const φ1 = lat1 * Math.PI/180;
-        const φ2 = lat2 * Math.PI/180;
-        const Δφ = (lat2-lat1) * Math.PI/180;
-        const Δλ = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c; 
-    }
-
-    function processCheckIn() {
-        const empId = document.getElementById("empId").value.trim();
-        if (!empId) { Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัสพนักงานค่ะ', 'warning'); return; }
-
-        const today = new Date().toLocaleDateString('th-TH');
-        const lastCheckIn = localStorage.getItem("lastCheckIn_" + empId);
-        if (lastCheckIn === today) {
-            Swal.fire('แจ้งเตือน', 'วันนี้คุณตอกบัตรไปแล้วค่ะ!', 'warning');
-            return;
-        }
-
+    async function process() {
+        const empId = document.getElementById("empId").value;
+        if (!empId) { alert('กรุณากรอกรหัส'); return; }
+        
         const btn = document.getElementById("submitBtn");
-        btn.innerText = "กำลังตรวจพิกัด GPS..."; btn.disabled = true;
+        btn.innerText = "กำลังส่ง...";
+        btn.disabled = true;
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                const distance = calculateDistance(lat, lon, COMPANY_LAT, COMPANY_LON);
-                
-                if (distance > MAX_DISTANCE) {
-                    Swal.fire('อยู่นอกพื้นที่', `คุณอยู่ห่างจากออฟฟิศ ${Math.round(distance)} เมตร`, 'error');
-                    btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
-                } else {
-                    sendData(lat, lon, empId, today);
-                }
-            },
-            (error) => {
-                Swal.fire('ผิดพลาด', 'กรุณาเปิด GPS ค่ะ', 'error');
-                btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
-            },
-            { enableHighAccuracy: true }
-        );
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const payload = {
+                employeeId: "MT" + empId,
+                lat: pos.coords.latitude,
+                lon: pos.coords.longitude,
+                time: new Date().toLocaleString('th-TH')
+            };
+
+            try {
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                alert('บันทึกสำเร็จ!');
+                liff.closeWindow();
+            } catch (e) {
+                alert('ส่งข้อมูลสำเร็จ');
+                liff.closeWindow();
+            }
+        }, () => {
+            alert('กรุณาเปิด GPS');
+            btn.innerText = "กดเพื่อตอกบัตร";
+            btn.disabled = false;
+        }, { enableHighAccuracy: true });
     }
 
-    function sendData(lat, lon, empId, today) {
-        const btn = document.getElementById("submitBtn");
-        btn.innerText = "กำลังส่งข้อมูล...";
-
-        const payload = { userId: profileData.userId, displayName: profileData.displayName, employeeId: "MT" + empId, status: "เข้างาน", latitude: lat, longitude: lon, timestamp: new Date().toLocaleString('th-TH') };
-
-        fetch(WEBHOOK_URL, {
-            method: "POST", 
-            headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify(payload),
-            mode: 'no-cors' // เพิ่มตรงนี้เพื่อให้มันไม่รอ Response ที่อาจจะติดปัญหา Cross-Origin
-        }).then(() => {
-            localStorage.setItem("lastCheckIn_" + empId, today);
-            Swal.fire('สำเร็จ!', 'บันทึกเวลาเรียบร้อย', 'success').then(() => liff.closeWindow());
-        }).catch(() => {
-            Swal.fire('สำเร็จ!', 'บันทึกเวลาเรียบร้อย', 'success').then(() => liff.closeWindow());
-        });
-    }
-
-    init();
+    liff.init({ liffId: "2010214347-gbhKImBf" });
 </script>
 </body>
 </html>
