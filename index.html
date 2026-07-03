@@ -30,7 +30,7 @@
     // --- ตั้งค่าพิกัดบริษัท ---
     const COMPANY_LAT = 13.9280625; 
     const COMPANY_LON = 100.4831272;
-    const MAX_DISTANCE = 100; // อนุญาตให้ห่างได้ไม่เกิน 100 เมตร
+    const MAX_DISTANCE = 100; 
 
     async function init() {
         await liff.init({ liffId: "2010214347-gbhKImBf" });
@@ -57,7 +57,6 @@
         const empId = document.getElementById("empId").value.trim();
         if (!empId) { Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัสพนักงานค่ะ', 'warning'); return; }
 
-        // เช็คห้ามตอกซ้ำในวันเดียวกัน
         const today = new Date().toLocaleDateString('th-TH');
         const lastCheckIn = localStorage.getItem("lastCheckIn_" + empId);
         if (lastCheckIn === today) {
@@ -75,7 +74,7 @@
                 const distance = calculateDistance(lat, lon, COMPANY_LAT, COMPANY_LON);
                 
                 if (distance > MAX_DISTANCE) {
-                    Swal.fire('อยู่นอกพื้นที่', `คุณอยู่ห่างจากออฟฟิศ ${Math.round(distance)} เมตร (ต้องอยู่ในระยะ ${MAX_DISTANCE}ม.)`, 'error');
+                    Swal.fire('อยู่นอกพื้นที่', `คุณอยู่ห่างจากออฟฟิศ ${Math.round(distance)} เมตร`, 'error');
                     btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
                 } else {
                     sendData(lat, lon, empId, today);
@@ -99,7 +98,7 @@
             method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
         }).then(response => {
             if(response.ok) {
-                localStorage.setItem("lastCheckIn_" + empId, today); // บันทึกว่าวันนี้ตอกแล้ว
+                localStorage.setItem("lastCheckIn_" + empId, today);
                 Swal.fire('สำเร็จ!', 'บันทึกเวลาเรียบร้อย', 'success').then(() => liff.closeWindow());
             } else {
                 Swal.fire('ผิดพลาด', 'ส่งข้อมูลไม่สำเร็จ', 'error');
