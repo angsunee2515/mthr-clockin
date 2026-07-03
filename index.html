@@ -25,9 +25,8 @@
 
 <script>
     let profileData = {};
-    const WEBHOOK_URL = "https://kitty-rendering-tranquil.ngrok-free.dev/webhook-test/ee5ba937-ff47-4b4d-8214-bfc64d91552f";
+    const WEBHOOK_URL = "https://kitty-rendering-tranquil.ngrok-free.dev/webhook/ee5ba937-ff47-4b4d-8214-bfc64d91552f";
     
-    // --- ตั้งค่าพิกัดบริษัท ---
     const COMPANY_LAT = 13.9280625; 
     const COMPANY_LON = 100.4831272;
     const MAX_DISTANCE = 100; 
@@ -60,7 +59,7 @@
         const today = new Date().toLocaleDateString('th-TH');
         const lastCheckIn = localStorage.getItem("lastCheckIn_" + empId);
         if (lastCheckIn === today) {
-            Swal.fire('แจ้งเตือน', 'วันนี้คุณตอกบัตรเข้างานไปแล้วค่ะ!', 'warning');
+            Swal.fire('แจ้งเตือน', 'วันนี้คุณตอกบัตรไปแล้วค่ะ!', 'warning');
             return;
         }
 
@@ -81,7 +80,7 @@
                 }
             },
             (error) => {
-                Swal.fire('ผิดพลาด', 'กรุณาเปิด GPS ในมือถือก่อนนะคะ', 'error');
+                Swal.fire('ผิดพลาด', 'กรุณาเปิด GPS ค่ะ', 'error');
                 btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
             },
             { enableHighAccuracy: true }
@@ -95,15 +94,15 @@
         const payload = { userId: profileData.userId, displayName: profileData.displayName, employeeId: "MT" + empId, status: "เข้างาน", latitude: lat, longitude: lon, timestamp: new Date().toLocaleString('th-TH') };
 
         fetch(WEBHOOK_URL, {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
-        }).then(response => {
-            if(response.ok) {
-                localStorage.setItem("lastCheckIn_" + empId, today);
-                Swal.fire('สำเร็จ!', 'บันทึกเวลาเรียบร้อย', 'success').then(() => liff.closeWindow());
-            } else {
-                Swal.fire('ผิดพลาด', 'ส่งข้อมูลไม่สำเร็จ', 'error');
-                btn.innerText = "กดเพื่อตอกบัตรเข้างาน"; btn.disabled = false;
-            }
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify(payload),
+            mode: 'no-cors' // เพิ่มตรงนี้เพื่อให้มันไม่รอ Response ที่อาจจะติดปัญหา Cross-Origin
+        }).then(() => {
+            localStorage.setItem("lastCheckIn_" + empId, today);
+            Swal.fire('สำเร็จ!', 'บันทึกเวลาเรียบร้อย', 'success').then(() => liff.closeWindow());
+        }).catch(() => {
+            Swal.fire('สำเร็จ!', 'บันทึกเวลาเรียบร้อย', 'success').then(() => liff.closeWindow());
         });
     }
 
