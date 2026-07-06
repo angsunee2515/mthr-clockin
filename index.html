@@ -1,71 +1,98 @@
-async function process() {
-    const empId = document.getElementById("empId").value;
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ระบบตอกบัตร</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    .card { max-width: 400px; margin: auto; border: 1px solid #ccc; padding: 20px; border-radius: 10px; }
+    input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+    .btn { width: 100%; padding: 15px; background-color: #06C755; color: white; border: none; border-radius: 5px; }
+  </style>
+</head>
 
-    if (!empId) {
-        alert("กรุณากรอกรหัสพนักงาน");
+<body>
+  <div class="card">
+    <h2>ตอกบัตรเข้างาน</h2>
+    <input type="text" id="empId" placeholder="รหัสพนักงาน" maxlength="2">
+    <button class="btn" id="submitBtn" onclick="process()">กดเพื่อตอกบัตร</button>
+  </div>
+
+  <script>
+    const WEBHOOK_URL = "https://kitty-rendering-tranquil.ngrok-free.dev/webhook/line-attendance";
+
+    async function process() {
+      const empId = document.getElementById("empId").value;
+
+      if (!empId) {
+        Swal.fire("กรุณากรอกรหัสพนักงาน");
         return;
-    }
+      }
 
-    const btn = document.getElementById("submitBtn");
-    btn.innerText = "กำลังส่ง...";
-    btn.disabled = true;
+      const btn = document.getElementById("submitBtn");
+      btn.innerText = "กำลังส่ง...";
+      btn.disabled = true;
 
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-
+      navigator.geolocation.getCurrentPosition(async (pos) => {
         const payload = {
-            employeeId: "MT" + empId,
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            time: new Date().toLocaleString("th-TH"),
-            source: "LIFF"
+          employeeId: "MT" + empId,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          time: new Date().toLocaleString("th-TH"),
+          source: "LIFF"
         };
 
         try {
+          const res = await fetch(WEBHOOK_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
 
-            const res = await fetch(WEBHOOK_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
-            });
+          if (!res.ok) {
+            throw new Error("HTTP " + res.status);
+          }
 
-            if (!res.ok) {
-                throw new Error("HTTP " + res.status);
-            }
-
-            Swal.fire({
-                icon: "success",
-                title: "ตอกบัตรสำเร็จ",
-                timer: 1500,
-                showConfirmButton: false
-            }).then(() => {
-                liff.closeWindow();
-            });
+          Swal.fire({
+            icon: "success",
+            title: "ตอกบัตรสำเร็จ",
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            liff.closeWindow();
+          });
 
         } catch (err) {
+          Swal.fire({
+            icon: "error",
+            title: "ส่งข้อมูลไม่สำเร็จ",
+            text: err.message
+          });
 
-            Swal.fire({
-                icon: "error",
-                title: "ส่งข้อมูลไม่สำเร็จ",
-                text: err.message
-            });
-
-            btn.innerText = "กดเพื่อตอกบัตร";
-            btn.disabled = false;
+          btn.innerText = "กดเพื่อตอกบัตร";
+          btn.disabled = false;
         }
 
-    }, () => {
-
+      }, () => {
         Swal.fire({
-            icon: "warning",
-            title: "กรุณาเปิด GPS"
+          icon: "warning",
+          title: "กรุณาเปิด GPS"
         });
 
         btn.innerText = "กดเพื่อตอกบัตร";
         btn.disabled = false;
-
-    }, {
+      }, {
         enableHighAccuracy: true
+      });
+    }
+
+    liff.init({
+      liffId: "2010214347-gbhKImBf"
     });
-}
+  </script>
+</body>
+</html>
