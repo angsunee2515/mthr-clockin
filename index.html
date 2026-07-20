@@ -2,156 +2,262 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0">
+
 <title>ระบบตอกบัตร</title>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-body{
-    font-family:sans-serif;
-    text-align:center;
-    padding:20px;
+body {
+    font-family: sans-serif;
+    text-align: center;
+    padding: 20px;
+    background: #f5f5f5;
 }
 
-.card{
-    max-width:400px;
-    margin:auto;
-    border:1px solid #ccc;
-    border-radius:10px;
-    padding:20px;
+.card {
+    max-width: 400px;
+    margin: auto;
+    padding: 24px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
 }
 
-input{
-    width:100%;
-    padding:10px;
-    margin:10px 0;
-    box-sizing:border-box;
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 15px 0;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 18px;
 }
 
-.btn{
-    width:100%;
-    padding:15px;
-    background:#06C755;
-    color:#fff;
-    border:none;
-    border-radius:5px;
-    cursor:pointer;
+.btn {
+    width: 100%;
+    padding: 15px;
+    background: #06C755;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.btn:disabled {
+    background: #aaa;
+    cursor: not-allowed;
 }
 </style>
-
 </head>
+
 <body>
 
 <div class="card">
+
     <h2>ตอกบัตรเข้างาน</h2>
 
     <input
         type="text"
         id="empId"
-        placeholder="รหัสพนักงาน"
+        inputmode="numeric"
+        placeholder="กรอกรหัสพนักงาน 2 ตัว เช่น 04"
         maxlength="2">
 
     <button
         class="btn"
         id="submitBtn"
-        onclick="process()">
+        onclick="processClockIn()">
         กดเพื่อตอกบัตร
     </button>
+
 </div>
 
 <script>
+const WEBHOOK_URL =
+    "https://hook.eu1.make.com/mjthdfbofhwaaxjai15ktaga2yw9f4qb";
 
-// ******** แก้ไขลิงก์โดยใช้ IP ของเซิร์ฟเวอร์คุณโบและปรับเป็นท่อทดสอบ (Webhook-Test) เรียบร้อยครับ ********
-const WEBHOOK_URL = "http://217.15.166.151:5678/webhook-test/clockin";
+const LIFF_ID = "2010214347-gbhKImBf";
 
-async function process(){
+async function processClockIn() {
 
-    const empId=document.getElementById("empId").value;
+    const empIdInput = document.getElementById("empId");
+    const btn = document.getElementById("submitBtn");
+    const empId = empIdInput.value.trim();
 
-    if(!empId){
-        Swal.fire({
-            icon:"warning",
-            title:"กรุณากรอกรหัสพนักงาน"
+    if (!/^\d{2}$/.test(empId)) {
+        await Swal.fire({
+            icon: "warning",
+            title: "กรุณากรอกรหัสพนักงาน",
+            text: "กรอกตัวเลขให้ครบ 2 ตัว เช่น 04"
         });
         return;
     }
 
-    const btn=document.getElementById("submitBtn");
-    btn.disabled=true;
-    btn.innerText="กำลังส่ง...";
+    btn.disabled = true;
+    btn.innerText = "กำลังตรวจสอบตำแหน่ง...";
 
-    navigator.geolocation.getCurrentPosition(async(pos)=>{
-
-        const payload={
-            employeeId:"MT"+empId,
-            latitude:pos.coords.latitude,
-            longitude:pos.coords.longitude,
-            time:new Date().toLocaleString("th-TH"),
-            source:"LIFF"
-        };
-
-        try{
-
-            const res=await fetch(WEBHOOK_URL,{
-                method:"POST",
-                headers:{
-                    "Content-Type":"application/json"
-                },
-                body:JSON.stringify(payload)
-            });
-
-            if(!res.ok){
-                throw new Error("HTTP "+res.status);
-            }
-
-            Swal.fire({
-                icon:"success",
-                title:"ตอกบัตรสำเร็จ",
-                timer:1500,
-                showConfirmButton:false
-            }).then(()=>{
-                if(liff.isInClient()){
-                    liff.closeWindow();
-                }
-            });
-
-        }catch(err){
-
-            Swal.fire({
-                icon:"error",
-                title:"ส่งข้อมูลไม่สำเร็จ",
-                text:err.message
-            });
-
-            btn.disabled=false;
-            btn.innerText="กดเพื่อตอกบัตร";
-        }
-
-    },()=>{
-
-        Swal.fire({
-            icon:"warning",
-            title:"กรุณาเปิด GPS"
+    if (!navigator.geolocation) {
+        await Swal.fire({
+            icon: "error",
+            title: "อุปกรณ์ไม่รองรับ GPS"
         });
 
-        btn.disabled=false;
-        btn.innerText="กดเพื่อตอกบัตร";
+        resetButton();
+        return;
+    }
 
-    },{
-        enableHighAccuracy:true
-    });
+    navigator.geolocation.getCurrentPosition(
 
+        async function(position) {
+
+            btn.innerText = "กำลังส่งข้อมูล...";
+
+            let lineUserId = "";
+            let displayName = "";
+
+            try {
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+
+                    lineUserId = profile.userId || "";
+                    displayName = profile.displayName || "";
+                }
+            } catch (profileError) {
+                console.warn(
+                    "ไม่สามารถอ่านข้อมูล LINE:",
+                    profileError
+                );
+            }
+
+            const now = new Date();
+
+            const payload = {
+                action: "clock_in",
+                employeeId: "MT" + empId,
+                lineUserId: lineUserId,
+                displayName: displayName,
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+                timestamp: now.toISOString(),
+                timeThai: now.toLocaleString("th-TH", {
+                    timeZone: "Asia/Bangkok"
+                }),
+                source: "LIFF"
+            };
+
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(
+                        "HTTP " + response.status
+                    );
+                }
+
+                await Swal.fire({
+                    icon: "success",
+                    title: "ตอกบัตรสำเร็จ",
+                    text: "บันทึกเวลาและตำแหน่งเรียบร้อยแล้ว",
+                    timer: 1800,
+                    showConfirmButton: false
+                });
+
+                if (liff.isInClient()) {
+                    liff.closeWindow();
+                }
+
+            } catch (error) {
+                console.error(error);
+
+                await Swal.fire({
+                    icon: "error",
+                    title: "ส่งข้อมูลไม่สำเร็จ",
+                    text: error.message
+                });
+
+                resetButton();
+            }
+        },
+
+        async function(error) {
+
+            let message = "กรุณาเปิด GPS แล้วลองใหม่";
+
+            if (error.code === 1) {
+                message =
+                    "กรุณาอนุญาตให้ระบบเข้าถึงตำแหน่ง";
+            } else if (error.code === 2) {
+                message =
+                    "ไม่สามารถตรวจหาตำแหน่งได้";
+            } else if (error.code === 3) {
+                message =
+                    "ค้นหาตำแหน่งใช้เวลานานเกินไป";
+            }
+
+            await Swal.fire({
+                icon: "warning",
+                title: "ไม่สามารถใช้ GPS",
+                text: message
+            });
+
+            resetButton();
+        },
+
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        }
+    );
 }
 
-async function main(){
-    await liff.init({
-        liffId:"2010214347-gbhKImBf"
-    });
+function resetButton() {
+    const btn = document.getElementById("submitBtn");
+
+    btn.disabled = false;
+    btn.innerText = "กดเพื่อตอกบัตร";
+}
+
+async function main() {
+    try {
+        await liff.init({
+            liffId: LIFF_ID
+        });
+
+        if (!liff.isLoggedIn()) {
+            liff.login();
+        }
+
+    } catch (error) {
+        console.error(
+            "LIFF initialization failed:",
+            error
+        );
+
+        Swal.fire({
+            icon: "error",
+            title: "เปิดระบบไม่สำเร็จ",
+            text: "กรุณาปิดหน้าต่างแล้วเปิดจาก LINE อีกครั้ง"
+        });
+    }
 }
 
 main();
-
 </script>
 
 </body>
