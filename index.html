@@ -23,28 +23,28 @@ body {
 
 .card {
     max-width: 400px;
-    margin: 60px auto 0;
-    padding: 30px 24px;
-    background: white;
-    border: 1px solid #ddd;
+    margin: 70px auto 0;
+    padding: 32px 24px;
+    background: #ffffff;
+    border: 1px solid #dddddd;
     border-radius: 16px;
     box-shadow: 0 5px 18px rgba(0,0,0,0.10);
 }
 
 .icon {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-size: 65px;
 }
 
 h2 {
-    margin: 10px 0 25px;
-    color: #222;
+    margin: 10px 0 30px;
+    color: #222222;
 }
 
 .btn {
     width: 100%;
     padding: 18px;
-    color: white;
+    color: #ffffff;
     background: #06C755;
     border: none;
     border-radius: 10px;
@@ -54,13 +54,13 @@ h2 {
 }
 
 .btn:disabled {
-    background: #aaa;
+    background: #aaaaaa;
     cursor: not-allowed;
 }
 
 .note {
     margin-top: 20px;
-    color: #777;
+    color: #777777;
     font-size: 14px;
 }
 </style>
@@ -100,26 +100,77 @@ let userId = "";
 let displayName = "";
 
 
-/* สร้างวันที่ตามเวลาไทย */
-function getThaiDateKey() {
+/* อ่านส่วนประกอบวันเวลาประเทศไทย */
+function getBangkokDateTime() {
 
-    return new Intl.DateTimeFormat(
-        "en-CA",
-        {
-            timeZone: "Asia/Bangkok",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit"
-        }
-    ).format(new Date());
+    const now = new Date();
+
+    const parts =
+        new Intl.DateTimeFormat(
+            "en-GB",
+            {
+                timeZone: "Asia/Bangkok",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false
+            }
+        ).formatToParts(now);
+
+    const values = {};
+
+    parts.forEach(function(part) {
+        values[part.type] = part.value;
+    });
+
+    const dateKey =
+        values.year +
+        "-" +
+        values.month +
+        "-" +
+        values.day;
+
+    const timeOnly =
+        values.hour +
+        ":" +
+        values.minute +
+        ":" +
+        values.second;
+
+    const timeThai =
+        values.day +
+        "/" +
+        values.month +
+        "/" +
+        values.year +
+        " " +
+        timeOnly;
+
+    return {
+        now: now,
+        dateKey: dateKey,
+        timeOnly: timeOnly,
+        timeThai: timeThai
+    };
 }
 
 
-/* ตั้งค่าปุ่ม */
-function setButton(
-    text,
-    disabled
-) {
+/* ตรวจสอบมาทันหรือสาย */
+function getArrivalStatus(timeOnly) {
+
+    if (timeOnly <= "09:00:00") {
+        return "มาทัน";
+    }
+
+    return "สาย";
+}
+
+
+/* เปลี่ยนข้อความและสถานะของปุ่ม */
+function setButton(text, disabled) {
 
     const btn =
         document.getElementById(
@@ -131,7 +182,7 @@ function setButton(
 }
 
 
-/* เริ่มระบบ LINE LIFF */
+/* เริ่มต้นระบบ LINE LIFF */
 async function initializeLiff() {
 
     try {
@@ -147,7 +198,7 @@ async function initializeLiff() {
 
         /*
          * อ่านข้อมูล LINE เบื้องหลัง
-         * แต่ไม่แสดงให้พนักงานเห็น
+         * ไม่แสดงให้พนักงานเห็น
          */
         const profile =
             await liff.getProfile();
@@ -171,7 +222,10 @@ async function initializeLiff() {
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "LIFF error:",
+            error
+        );
 
         setButton(
             "เปิดระบบไม่สำเร็จ",
@@ -182,13 +236,13 @@ async function initializeLiff() {
             icon: "error",
             title: "เปิดระบบไม่สำเร็จ",
             text:
-                "กรุณาปิดหน้าต่าง แล้วเปิดจาก LINE ใหม่อีกครั้ง"
+                "กรุณาปิดหน้าต่าง แล้วเปิดระบบจาก LINE ใหม่"
         });
     }
 }
 
 
-/* ตอกบัตรเข้างาน */
+/* กระบวนการตอกบัตร */
 async function clockIn() {
 
     if (!userId) {
@@ -197,47 +251,54 @@ async function clockIn() {
             icon: "error",
             title: "ไม่พบข้อมูล LINE",
             text:
-                "กรุณาปิดหน้าต่าง แล้วเปิดจาก LINE ใหม่"
+                "กรุณาปิดหน้าต่าง แล้วเปิดระบบจาก LINE ใหม่"
         });
 
         return;
     }
 
-    const attendanceDate =
-        getThaiDateKey();
+    const bangkok =
+        getBangkokDateTime();
+
+    const arrivalStatus =
+        getArrivalStatus(
+            bangkok.timeOnly
+        );
 
     /*
-     * ใช้ LINE User ID และวันที่
-     * เป็นรหัสป้องกันการตอกซ้ำ
+     * LINE User ID + วันที่
+     * ใช้เป็นรหัสรายการตอกบัตร
      */
     const attendanceKey =
         userId +
         "_" +
-        attendanceDate;
+        bangkok.dateKey;
 
     const storageKey =
         "clockin_" +
         attendanceKey;
 
+    /*
+     * ตรวจสอบการตอกซ้ำในเครื่องเดิม
+     */
     const previousClockIn =
         localStorage.getItem(
             storageKey
         );
 
-    /*
-     * ป้องกันการตอกซ้ำ
-     * บนโทรศัพท์และ LINE เดิม
-     */
     if (previousClockIn) {
 
         let previousData = {};
 
         try {
+
             previousData =
                 JSON.parse(
                     previousClockIn
                 );
+
         } catch (error) {
+
             previousData = {};
         }
 
@@ -291,7 +352,7 @@ async function clockIn() {
                 );
 
                 /*
-                 * อ่านข้อมูล LINE ใหม่อีกครั้ง
+                 * อ่านข้อมูล LINE อีกครั้ง
                  */
                 const profile =
                     await liff.getProfile();
@@ -302,25 +363,13 @@ async function clockIn() {
                 displayName =
                     profile.displayName || "";
 
-                const now =
-                    new Date();
-
-                const timeThai =
-                    now.toLocaleString(
-                        "th-TH",
-                        {
-                            timeZone:
-                                "Asia/Bangkok"
-                        }
-                    );
-
                 /*
-                 * ข้อมูลทั้งหมดส่งไป Make
+                 * ข้อมูลที่ส่งไป Make
                  * แต่ไม่แสดงบนหน้าจอพนักงาน
                  */
                 const payload = {
+
                     userId: userId,
-                    lineUserId: userId,
 
                     displayName:
                         displayName,
@@ -328,7 +377,6 @@ async function clockIn() {
                     employeeId: "",
 
                     status: "เข้างาน",
-                    action: "เข้างาน",
 
                     latitude:
                         position.coords.latitude,
@@ -340,19 +388,30 @@ async function clockIn() {
                         position.coords.accuracy,
 
                     timestamp:
-                        now.toISOString(),
+                        bangkok.now.toISOString(),
 
                     timeThai:
-                        timeThai,
+                        bangkok.timeThai,
 
                     attendanceDate:
-                        attendanceDate,
+                        bangkok.dateKey,
+
+                    attendanceTime:
+                        bangkok.timeOnly,
+
+                    summaryStatus:
+                        arrivalStatus,
 
                     attendanceKey:
                         attendanceKey,
 
                     source: "LIFF"
                 };
+
+                console.log(
+                    "Sending payload:",
+                    payload
+                );
 
                 const response =
                     await fetch(
@@ -374,7 +433,10 @@ async function clockIn() {
 
                 if (!response.ok) {
 
-                    if (response.status === 409) {
+                    if (
+                        response.status === 409
+                    ) {
+
                         throw new Error(
                             "DUPLICATE"
                         );
@@ -388,13 +450,15 @@ async function clockIn() {
 
                 /*
                  * บันทึกว่าตอกบัตรแล้ว
-                 * หลัง Make รับข้อมูลสำเร็จ
                  */
                 localStorage.setItem(
                     storageKey,
                     JSON.stringify({
                         timeThai:
-                            timeThai
+                            bangkok.timeThai,
+
+                        summaryStatus:
+                            arrivalStatus
                     })
                 );
 
@@ -414,7 +478,10 @@ async function clockIn() {
 
             } catch (error) {
 
-                console.error(error);
+                console.error(
+                    "Clock-in error:",
+                    error
+                );
 
                 if (
                     error.message ===
@@ -489,7 +556,7 @@ async function clockIn() {
 }
 
 
-/* เริ่มต้นระบบ */
+/* เริ่มระบบ */
 initializeLiff();
 </script>
 
