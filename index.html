@@ -14,52 +14,54 @@
 
 <style>
 body {
+    margin: 0;
+    padding: 20px;
     font-family: sans-serif;
     text-align: center;
-    padding: 20px;
     background: #f5f5f5;
 }
 
 .card {
     max-width: 400px;
-    margin: auto;
-    padding: 24px;
+    margin: 60px auto 0;
+    padding: 30px 24px;
     background: white;
     border: 1px solid #ddd;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border-radius: 16px;
+    box-shadow: 0 5px 18px rgba(0,0,0,0.10);
+}
+
+.icon {
+    margin-bottom: 10px;
+    font-size: 65px;
 }
 
 h2 {
-    margin-top: 0;
-}
-
-input {
-    width: 100%;
-    padding: 12px;
-    margin: 15px 0;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 18px;
-    text-align: center;
+    margin: 10px 0 25px;
+    color: #222;
 }
 
 .btn {
     width: 100%;
-    padding: 15px;
-    background: #06C755;
+    padding: 18px;
     color: white;
+    background: #06C755;
     border: none;
-    border-radius: 6px;
+    border-radius: 10px;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
 }
 
 .btn:disabled {
     background: #aaa;
     cursor: not-allowed;
+}
+
+.note {
+    margin-top: 20px;
+    color: #777;
+    font-size: 14px;
 }
 </style>
 </head>
@@ -68,22 +70,22 @@ input {
 
 <div class="card">
 
-    <h2>ตอกบัตรเข้างาน</h2>
+    <div class="icon">⏰</div>
 
-    <input
-        type="text"
-        id="empId"
-        inputmode="numeric"
-        placeholder="กรอกรหัสพนักงาน 2 ตัว เช่น 04"
-        maxlength="2">
+    <h2>ระบบตอกบัตรเข้างาน</h2>
 
     <button
         type="button"
         class="btn"
-        id="submitBtn"
-        onclick="processClockIn()">
-        กดเพื่อตอกบัตร
+        id="clockInBtn"
+        onclick="clockIn()"
+        disabled>
+        กำลังเปิดระบบ...
     </button>
+
+    <div class="note">
+        กดตอกบัตรได้วันละ 1 ครั้ง
+    </div>
 
 </div>
 
@@ -91,13 +93,45 @@ input {
 const WEBHOOK_URL =
     "https://hook.eu1.make.com/mjthdfbofhwaaxjai15ktaga2yw9f4qb";
 
-const LIFF_ID = "2010214347-gbhKImBf";
+const LIFF_ID =
+    "2010214347-gbhKImBf";
 
-let lineUserId = "";
+let userId = "";
 let displayName = "";
 
 
-/* เริ่มต้นระบบ LIFF */
+/* สร้างวันที่ตามเวลาไทย */
+function getThaiDateKey() {
+
+    return new Intl.DateTimeFormat(
+        "en-CA",
+        {
+            timeZone: "Asia/Bangkok",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        }
+    ).format(new Date());
+}
+
+
+/* ตั้งค่าปุ่ม */
+function setButton(
+    text,
+    disabled
+) {
+
+    const btn =
+        document.getElementById(
+            "clockInBtn"
+        );
+
+    btn.innerText = text;
+    btn.disabled = disabled;
+}
+
+
+/* เริ่มระบบ LINE LIFF */
 async function initializeLiff() {
 
     try {
@@ -111,89 +145,158 @@ async function initializeLiff() {
             return;
         }
 
-        const profile = await liff.getProfile();
+        /*
+         * อ่านข้อมูล LINE เบื้องหลัง
+         * แต่ไม่แสดงให้พนักงานเห็น
+         */
+        const profile =
+            await liff.getProfile();
 
-        lineUserId = profile.userId || "";
-        displayName = profile.displayName || "";
+        userId =
+            profile.userId || "";
+
+        displayName =
+            profile.displayName || "";
+
+        if (!userId) {
+            throw new Error(
+                "ไม่พบ LINE User ID"
+            );
+        }
+
+        setButton(
+            "ตอกบัตรเข้างาน",
+            false
+        );
 
     } catch (error) {
 
-        console.error(
-            "LIFF initialization failed:",
-            error
+        console.error(error);
+
+        setButton(
+            "เปิดระบบไม่สำเร็จ",
+            true
         );
 
         await Swal.fire({
             icon: "error",
             title: "เปิดระบบไม่สำเร็จ",
-            text: "กรุณาปิดหน้าต่าง แล้วเปิดระบบจาก LINE ใหม่อีกครั้ง"
+            text:
+                "กรุณาปิดหน้าต่าง แล้วเปิดจาก LINE ใหม่อีกครั้ง"
         });
     }
 }
 
 
-/* เริ่มกระบวนการตอกบัตร */
-async function processClockIn() {
+/* ตอกบัตรเข้างาน */
+async function clockIn() {
 
-    const empIdInput =
-        document.getElementById("empId");
-
-    const btn =
-        document.getElementById("submitBtn");
-
-    const empId =
-        empIdInput.value.trim();
-
-    /* ตรวจรหัสพนักงาน */
-    if (!/^\d{2}$/.test(empId)) {
+    if (!userId) {
 
         await Swal.fire({
-            icon: "warning",
-            title: "กรุณากรอกรหัสพนักงาน",
-            text: "กรอกตัวเลขให้ครบ 2 ตัว เช่น 04"
+            icon: "error",
+            title: "ไม่พบข้อมูล LINE",
+            text:
+                "กรุณาปิดหน้าต่าง แล้วเปิดจาก LINE ใหม่"
         });
 
         return;
     }
 
-    /* ตรวจสอบการเข้าสู่ระบบ LINE */
-    if (!liff.isLoggedIn()) {
-        liff.login();
+    const attendanceDate =
+        getThaiDateKey();
+
+    /*
+     * ใช้ LINE User ID และวันที่
+     * เป็นรหัสป้องกันการตอกซ้ำ
+     */
+    const attendanceKey =
+        userId +
+        "_" +
+        attendanceDate;
+
+    const storageKey =
+        "clockin_" +
+        attendanceKey;
+
+    const previousClockIn =
+        localStorage.getItem(
+            storageKey
+        );
+
+    /*
+     * ป้องกันการตอกซ้ำ
+     * บนโทรศัพท์และ LINE เดิม
+     */
+    if (previousClockIn) {
+
+        let previousData = {};
+
+        try {
+            previousData =
+                JSON.parse(
+                    previousClockIn
+                );
+        } catch (error) {
+            previousData = {};
+        }
+
+        await Swal.fire({
+            icon: "warning",
+            title: "ตอกบัตรแล้ว",
+            html:
+                "วันนี้คุณตอกบัตรเรียบร้อยแล้ว" +
+                (
+                    previousData.timeThai
+                        ? "<br>เวลา: " +
+                          previousData.timeThai
+                        : ""
+                ),
+            confirmButtonText: "ตกลง"
+        });
+
         return;
     }
 
-    btn.disabled = true;
-    btn.innerText = "กำลังตรวจสอบตำแหน่ง...";
+    setButton(
+        "กำลังตรวจสอบตำแหน่ง...",
+        true
+    );
 
-    /* ตรวจสอบว่าเครื่องรองรับ GPS หรือไม่ */
     if (!navigator.geolocation) {
 
         await Swal.fire({
             icon: "error",
-            title: "อุปกรณ์ไม่รองรับ GPS"
+            title:
+                "อุปกรณ์ไม่รองรับ GPS"
         });
 
-        resetButton();
+        setButton(
+            "ตอกบัตรเข้างาน",
+            false
+        );
+
         return;
     }
 
-    /* ขอพิกัด GPS */
     navigator.geolocation.getCurrentPosition(
 
         async function(position) {
 
-            btn.innerText = "กำลังส่งข้อมูล...";
-
             try {
 
+                setButton(
+                    "กำลังส่งข้อมูล...",
+                    true
+                );
+
                 /*
-                 * อ่านข้อมูล LINE อีกครั้ง
-                 * เพื่อป้องกันกรณีหน้าเว็บโหลดข้อมูลไม่ทัน
+                 * อ่านข้อมูล LINE ใหม่อีกครั้ง
                  */
                 const profile =
                     await liff.getProfile();
 
-                lineUserId =
+                userId =
                     profile.userId || "";
 
                 displayName =
@@ -202,47 +305,66 @@ async function processClockIn() {
                 const now =
                     new Date();
 
+                const timeThai =
+                    now.toLocaleString(
+                        "th-TH",
+                        {
+                            timeZone:
+                                "Asia/Bangkok"
+                        }
+                    );
+
                 /*
-                 * ชื่อฟิลด์ต้องตรงกับฟิลด์ใน Make
+                 * ข้อมูลทั้งหมดส่งไป Make
+                 * แต่ไม่แสดงบนหน้าจอพนักงาน
                  */
                 const payload = {
-                    userId: lineUserId,
-                    displayName: displayName,
-                    employeeId: "MT" + empId,
+                    userId: userId,
+                    lineUserId: userId,
+
+                    displayName:
+                        displayName,
+
+                    employeeId: "",
+
                     status: "เข้างาน",
+                    action: "เข้างาน",
+
                     latitude:
                         position.coords.latitude,
+
                     longitude:
                         position.coords.longitude,
+
                     accuracy:
                         position.coords.accuracy,
+
                     timestamp:
                         now.toISOString(),
+
                     timeThai:
-                        now.toLocaleString(
-                            "th-TH",
-                            {
-                                timeZone:
-                                    "Asia/Bangkok"
-                            }
-                        ),
+                        timeThai,
+
+                    attendanceDate:
+                        attendanceDate,
+
+                    attendanceKey:
+                        attendanceKey,
+
                     source: "LIFF"
                 };
-
-                console.log(
-                    "Sending payload:",
-                    payload
-                );
 
                 const response =
                     await fetch(
                         WEBHOOK_URL,
                         {
                             method: "POST",
+
                             headers: {
                                 "Content-Type":
                                     "application/json"
                             },
+
                             body:
                                 JSON.stringify(
                                     payload
@@ -251,25 +373,40 @@ async function processClockIn() {
                     );
 
                 if (!response.ok) {
+
+                    if (response.status === 409) {
+                        throw new Error(
+                            "DUPLICATE"
+                        );
+                    }
+
                     throw new Error(
                         "HTTP " +
                         response.status
                     );
                 }
 
+                /*
+                 * บันทึกว่าตอกบัตรแล้ว
+                 * หลัง Make รับข้อมูลสำเร็จ
+                 */
+                localStorage.setItem(
+                    storageKey,
+                    JSON.stringify({
+                        timeThai:
+                            timeThai
+                    })
+                );
+
                 await Swal.fire({
                     icon: "success",
-                    title: "ตอกบัตรสำเร็จ",
-                    html:
-                        "รหัสพนักงาน: MT" +
-                        empId +
-                        "<br>เวลา: " +
-                        payload.timeThai,
-                    timer: 2200,
+                    title:
+                        "ตอกบัตรสำเร็จ",
+                    text:
+                        "บันทึกเวลาเรียบร้อยแล้ว",
+                    timer: 2000,
                     showConfirmButton: false
                 });
-
-                empIdInput.value = "";
 
                 if (liff.isInClient()) {
                     liff.closeWindow();
@@ -277,18 +414,36 @@ async function processClockIn() {
 
             } catch (error) {
 
-                console.error(
-                    "ส่งข้อมูลไม่สำเร็จ:",
-                    error
+                console.error(error);
+
+                if (
+                    error.message ===
+                    "DUPLICATE"
+                ) {
+
+                    await Swal.fire({
+                        icon: "warning",
+                        title:
+                            "ตอกบัตรแล้ว",
+                        text:
+                            "วันนี้คุณตอกบัตรเรียบร้อยแล้ว"
+                    });
+
+                } else {
+
+                    await Swal.fire({
+                        icon: "error",
+                        title:
+                            "ส่งข้อมูลไม่สำเร็จ",
+                        text:
+                            error.message
+                    });
+                }
+
+                setButton(
+                    "ตอกบัตรเข้างาน",
+                    false
                 );
-
-                await Swal.fire({
-                    icon: "error",
-                    title: "ส่งข้อมูลไม่สำเร็จ",
-                    text: error.message
-                });
-
-                resetButton();
             }
         },
 
@@ -314,11 +469,15 @@ async function processClockIn() {
 
             await Swal.fire({
                 icon: "warning",
-                title: "ไม่สามารถใช้ GPS",
+                title:
+                    "ไม่สามารถใช้ GPS",
                 text: message
             });
 
-            resetButton();
+            setButton(
+                "ตอกบัตรเข้างาน",
+                false
+            );
         },
 
         {
@@ -330,18 +489,7 @@ async function processClockIn() {
 }
 
 
-/* คืนสถานะปุ่ม */
-function resetButton() {
-
-    const btn =
-        document.getElementById("submitBtn");
-
-    btn.disabled = false;
-    btn.innerText = "กดเพื่อตอกบัตร";
-}
-
-
-/* เริ่มระบบ */
+/* เริ่มต้นระบบ */
 initializeLiff();
 </script>
 
