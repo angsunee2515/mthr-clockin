@@ -1,148 +1,1195 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>แบบฟอร์มใบลาออนไลน์</title>
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f4f6f9; padding: 20px; color: #333; }
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        h2 { text-align: center; color: #06C755; margin-bottom: 20px; }
-        label { font-weight: bold; display: block; margin-top: 15px; margin-bottom: 5px; font-size: 14px; }
-        select, input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
-        textarea { resize: vertical; height: 80px; }
-        button { width: 100%; padding: 12px; background-color: #06C755; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; }
-        button:disabled { background-color: #a5d6a7; cursor: not-allowed; }
-        .profile-container { display: flex; align-items: center; margin-bottom: 20px; background: #e8f5e9; padding: 10px; border-radius: 10px; }
-        .profile-img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
-        .profile-name { font-weight: bold; font-size: 16px; color: #2e7d32; }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0">
+
+<title>ระบบใบลาออนไลน์</title>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+<style>
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: "Sarabun", sans-serif;
+    color: #333;
+    background: #f4f6f9;
+}
+
+.card {
+    max-width: 430px;
+    margin: auto;
+    padding: 24px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.10);
+}
+
+h2 {
+    margin: 0 0 20px;
+    color: #06C755;
+    text-align: center;
+}
+
+.status-box {
+    margin-bottom: 18px;
+    padding: 10px;
+    color: #555;
+    text-align: center;
+    background: #f1f8e9;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.menu {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.menu-button {
+    width: 100%;
+    padding: 13px;
+    color: #06C755;
+    background: white;
+    border: 2px solid #06C755;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.menu-button.active {
+    color: white;
+    background: #06C755;
+}
+
+.section {
+    display: none;
+}
+
+.section.active {
+    display: block;
+}
+
+label {
+    display: block;
+    margin-top: 14px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+select,
+input,
+textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px;
+    font-family: inherit;
+    font-size: 15px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+textarea {
+    height: 90px;
+    resize: vertical;
+}
+
+.submit-button {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    color: white;
+    background: #06C755;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.submit-button:disabled,
+.menu-button:disabled {
+    color: white;
+    background: #aaa;
+    border-color: #aaa;
+    cursor: not-allowed;
+}
+
+.balance-card {
+    display: none;
+    margin-top: 18px;
+    padding: 15px;
+    background: #f1f8e9;
+    border-radius: 10px;
+}
+
+.balance-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #dce8d7;
+}
+
+.balance-row:last-child {
+    border-bottom: none;
+}
+
+.note {
+    margin-top: 16px;
+    color: #777;
+    text-align: center;
+    font-size: 12px;
+}
+</style>
 </head>
+
 <body>
 
 <div class="card">
-    <h2>ยื่นใบลาออนไลน์</h2>
-    
-    <div class="profile-container" id="profileBox" style="display: none;">
-        <img id="profileImg" class="profile-img" src="" alt="Profile">
-        <div class="profile-name" id="displayName">กำลังโหลดชื่อ...</div>
+
+    <h2>ระบบใบลาออนไลน์</h2>
+
+    <div
+        class="status-box"
+        id="systemStatus">
+        กำลังตรวจสอบข้อมูล LINE...
     </div>
 
-    <form id="leaveForm">
-        <label for="employeeId">รหัสพนักงาน (กรอกเฉพาะตัวเลข 2 ตัว):</label>
-        <input type="text" id="employeeId" placeholder="เช่น 01 หรือ 12" required pattern="[0-9]{2}" title="กรุณากรอกตัวเลข 2 ตัวค่ะ">
+    <div class="menu">
 
-        <label for="leaveType">ประเภทการลา:</label>
-        <select id="leaveType" required>
-            <option value="" disabled selected>-- เลือกประเภทการลา --</option>
-            <option value="ลากิจ">ลากิจ</option>
-            <option value="ลาป่วย">ลาป่วย</option>
-            <option value="ลาพักร้อน">ลาพักร้อน</option>
-        </select>
+        <button
+            class="menu-button active"
+            id="newLeaveMenu"
+            onclick="showSection('newLeave')"
+            disabled>
+            ยื่นใบลาใหม่
+        </button>
 
-        <label for="startDate">วันที่เริ่มลา:</label>
-        <input type="date" id="startDate" required>
+        <button
+            class="menu-button"
+            id="changeLeaveMenu"
+            onclick="showSection('changeLeave')"
+            disabled>
+            ขอเปลี่ยนวันลา
+        </button>
 
-        <label for="endDate">วันที่สิ้นสุดการลา:</label>
-        <input type="date" id="endDate" required>
+        <button
+            class="menu-button"
+            id="balanceMenu"
+            onclick="showSection('balance')"
+            disabled>
+            ตรวจสอบวันลาคงเหลือ
+        </button>
 
-        <label for="totalDays">จำนวนวันลารวม (วัน):</label>
-        <input type="number" id="totalDays" step="0.5" min="0.5" placeholder="เช่น 1 หรือ 1.5" required>
+    </div>
 
-        <label for="reason">เหตุผลการลา:</label>
-        <textarea id="reason" placeholder="ระบุเหตุผลการลา..." required></textarea>
 
-        <button type="submit" id="submitBtn">ส่งใบลา</button>
-    </form>
+    <!-- ยื่นใบลาใหม่ -->
+    <section
+        class="section active"
+        id="newLeave">
+
+        <form id="newLeaveForm">
+
+            <label for="leaveType">
+                ประเภทการลา
+            </label>
+
+            <select
+                id="leaveType"
+                required>
+
+                <option
+                    value=""
+                    disabled
+                    selected>
+                    -- เลือกประเภทการลา --
+                </option>
+
+                <option value="ลากิจ">
+                    ลากิจ
+                </option>
+
+                <option value="ลาป่วย">
+                    ลาป่วย
+                </option>
+
+                <option value="ลาพักร้อน">
+                    ลาพักร้อน
+                </option>
+
+            </select>
+
+            <label for="startDate">
+                วันที่เริ่มลา
+            </label>
+
+            <input
+                type="date"
+                id="startDate"
+                required>
+
+            <label for="endDate">
+                วันที่สิ้นสุดการลา
+            </label>
+
+            <input
+                type="date"
+                id="endDate"
+                required>
+
+            <label for="totalDays">
+                จำนวนวันลารวม
+            </label>
+
+            <input
+                type="number"
+                id="totalDays"
+                min="0.5"
+                step="0.5"
+                placeholder="เช่น 1 หรือ 1.5"
+                required>
+
+            <label for="reason">
+                เหตุผลการลา
+            </label>
+
+            <textarea
+                id="reason"
+                placeholder="ระบุเหตุผลการลา..."
+                required></textarea>
+
+            <button
+                type="submit"
+                class="submit-button"
+                id="newLeaveSubmit">
+                ส่งใบลา
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <!-- ขอเปลี่ยนวันลา -->
+    <section
+        class="section"
+        id="changeLeave">
+
+        <form id="changeLeaveForm">
+
+            <label for="leaveNumber">
+                เลขที่ใบลาเดิม
+            </label>
+
+            <input
+                type="text"
+                id="leaveNumber"
+                placeholder="เช่น LV20260720123456"
+                required>
+
+            <label for="newStartDate">
+                วันที่เริ่มลาใหม่
+            </label>
+
+            <input
+                type="date"
+                id="newStartDate"
+                required>
+
+            <label for="newEndDate">
+                วันที่สิ้นสุดใหม่
+            </label>
+
+            <input
+                type="date"
+                id="newEndDate"
+                required>
+
+            <label for="newTotalDays">
+                จำนวนวันลาใหม่
+            </label>
+
+            <input
+                type="number"
+                id="newTotalDays"
+                min="0.5"
+                step="0.5"
+                placeholder="เช่น 1 หรือ 1.5"
+                required>
+
+            <label for="changeReason">
+                เหตุผลที่ขอเปลี่ยน
+            </label>
+
+            <textarea
+                id="changeReason"
+                placeholder="ระบุเหตุผลที่ต้องการเปลี่ยนวันลา..."
+                required></textarea>
+
+            <button
+                type="submit"
+                class="submit-button"
+                id="changeLeaveSubmit">
+                ส่งคำขอเปลี่ยนวันลา
+            </button>
+
+        </form>
+
+    </section>
+
+
+    <!-- ตรวจสอบยอดวันลา -->
+    <section
+        class="section"
+        id="balance">
+
+        <button
+            type="button"
+            class="submit-button"
+            id="checkBalanceButton"
+            onclick="checkLeaveBalance()">
+            ตรวจสอบยอดวันลา
+        </button>
+
+        <div
+            class="balance-card"
+            id="balanceResult">
+
+            <div class="balance-row">
+                <span>สิทธิพักร้อนทั้งหมด</span>
+                <strong id="vacationTotal">-</strong>
+            </div>
+
+            <div class="balance-row">
+                <span>พักร้อนที่ใช้แล้ว</span>
+                <strong id="vacationUsed">-</strong>
+            </div>
+
+            <div class="balance-row">
+                <span>พักร้อนคงเหลือ</span>
+                <strong id="vacationRemaining">-</strong>
+            </div>
+
+            <div class="balance-row">
+                <span>รายการรออนุมัติ</span>
+                <strong id="vacationPending">-</strong>
+            </div>
+
+        </div>
+
+    </section>
+
+    <div class="note">
+        ระบบอ่านข้อมูลพนักงานจากบัญชี LINE โดยอัตโนมัติ
+    </div>
+
 </div>
 
 <script>
-    let userName = "";
-    let userId = "";
+const LIFF_ID =
+    "2010214347-3cJ4grN3";
 
-    // 🏷️ เปลี่ยนรหัสคำนำหน้าเป็น MT เรียบร้อยค่ะ
-    const PREFIX = "MT";
+const WEBHOOK_URL =
+    "https://hook.eu1.make.com/c4k3xn8vl8ryu5p82qjbwt2ht7xm1bhv";
 
-    const LIFF_ID = "2010214347-3cJ4grN3"; 
-    const WEBHOOK_URL = "https://hook.eu1.make.com/c4k3xn8vl8ryu5p82qjbwt2ht7xm1bhv"; 
+let userId = "";
+let displayName = "";
 
-    function lockPastDates() {
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        let mm = today.getMonth() + 1;
-        let dd = today.getDate();
-        if (dd < 10) dd = '0' + dd;
-        if (mm < 10) mm = '0' + mm;
-        const formattedToday = yyyy + '-' + mm + '-' + dd;
-        document.getElementById('startDate').min = formattedToday;
-        document.getElementById('endDate').min = formattedToday;
-    }
 
-    async function initLiff() {
-        try {
-            await liff.init({ liffId: LIFF_ID });
-            if (liff.isLoggedIn()) {
-                const profile = await liff.getProfile();
-                userName = profile.displayName;
-                userId = profile.userId;
-                
-                document.getElementById('profileImg').src = profile.pictureUrl || 'https://via.placeholder.com/50';
-                document.getElementById('displayName').innerText = "คุณ " + userName;
-                document.getElementById('profileBox').style.display = "flex";
-                lockPastDates(); 
-            } else {
-                liff.login();
-            }
-        } catch (error) {
-            console.error("LIFF Init Error:", error);
+/* วันที่ปัจจุบันตามเวลาประเทศไทย */
+function getBangkokDate() {
+
+    return new Intl.DateTimeFormat(
+        "en-CA",
+        {
+            timeZone: "Asia/Bangkok",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
         }
-    }
+    ).format(new Date());
+}
 
-    document.getElementById("leaveForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const btn = document.getElementById("submitBtn");
-        btn.innerText = "กำลังส่งข้อมูล...";
-        btn.disabled = true;
 
-        const rawInput = document.getElementById("employeeId").value.trim();
-        const fullEmployeeId = PREFIX + rawInput;
+/* วันและเวลาไทย */
+function getBangkokDateTime() {
 
-        const payload = {
-            userId: userId,
-            displayName: userName,
-            employeeId: fullEmployeeId, 
-            leaveType: document.getElementById("leaveType").value,
-            startDate: document.getElementById("startDate").value,
-            endDate: document.getElementById("endDate").value,
-            totalDays: document.getElementById("totalDays").value,
-            reason: document.getElementById("reason").value,
-            timestamp: new Date().toLocaleString('th-TH')
-        };
+    const now = new Date();
 
-        try {
-            const response = await fetch(WEBHOOK_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                Swal.fire({ title: 'สำเร็จ!', text: 'ส่งใบลาของรหัส ' + fullEmployeeId + ' เรียบร้อยแล้วค่ะ', icon: 'success', confirmButtonColor: '#06C755' })
-                .then(() => liff.closeWindow());
-            } else {
-                throw new Error("Network response was not ok");
+    const parts =
+        new Intl.DateTimeFormat(
+            "en-GB",
+            {
+                timeZone: "Asia/Bangkok",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false
             }
-        } catch (error) {
-            Swal.fire('ข้อผิดพลาด!', 'ไม่สามารถส่งข้อมูลได้ กรุณาลองใหม่', 'error');
-            btn.innerText = "ส่งใบลา";
-            btn.disabled = false;
-        }
+        ).formatToParts(now);
+
+    const values = {};
+
+    parts.forEach(function(part) {
+        values[part.type] = part.value;
     });
 
-    initLiff();
+    return (
+        values.day +
+        "/" +
+        values.month +
+        "/" +
+        values.year +
+        " " +
+        values.hour +
+        ":" +
+        values.minute +
+        ":" +
+        values.second
+    );
+}
+
+
+/* สร้างเลขที่ใบลา */
+function createLeaveNumber() {
+
+    const now = new Date();
+
+    const datePart =
+        getBangkokDate()
+        .replaceAll("-", "");
+
+    const timePart =
+        String(now.getTime())
+        .slice(-6);
+
+    return (
+        "LV" +
+        datePart +
+        timePart
+    );
+}
+
+
+/* เปิดเมนู */
+function enableMenus(enabled) {
+
+    document
+        .querySelectorAll(
+            ".menu-button"
+        )
+        .forEach(function(button) {
+            button.disabled = !enabled;
+        });
+}
+
+
+/* เปลี่ยนหน้าเมนู */
+function showSection(sectionId) {
+
+    document
+        .querySelectorAll(".section")
+        .forEach(function(section) {
+            section.classList.remove(
+                "active"
+            );
+        });
+
+    document
+        .querySelectorAll(
+            ".menu-button"
+        )
+        .forEach(function(button) {
+            button.classList.remove(
+                "active"
+            );
+        });
+
+    document
+        .getElementById(sectionId)
+        .classList.add("active");
+
+    if (sectionId === "newLeave") {
+        document
+            .getElementById(
+                "newLeaveMenu"
+            )
+            .classList.add("active");
+    }
+
+    if (sectionId === "changeLeave") {
+        document
+            .getElementById(
+                "changeLeaveMenu"
+            )
+            .classList.add("active");
+    }
+
+    if (sectionId === "balance") {
+        document
+            .getElementById(
+                "balanceMenu"
+            )
+            .classList.add("active");
+    }
+}
+
+
+/* ป้องกันวันที่ย้อนหลัง */
+function lockPastDates() {
+
+    const today =
+        getBangkokDate();
+
+    [
+        "startDate",
+        "endDate",
+        "newStartDate",
+        "newEndDate"
+    ].forEach(function(id) {
+        document
+            .getElementById(id)
+            .min = today;
+    });
+}
+
+
+/* ตรวจวันที่เริ่มและสิ้นสุด */
+function datesAreValid(
+    startDate,
+    endDate
+) {
+
+    return (
+        startDate &&
+        endDate &&
+        endDate >= startDate
+    );
+}
+
+
+/* เรียก Make Webhook */
+async function sendToMake(payload) {
+
+    const response =
+        await fetch(
+            WEBHOOK_URL,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify(
+                        payload
+                    )
+            }
+        );
+
+    let result = null;
+
+    const contentType =
+        response.headers.get(
+            "content-type"
+        ) || "";
+
+    if (
+        contentType.includes(
+            "application/json"
+        )
+    ) {
+
+        try {
+            result =
+                await response.json();
+        } catch (error) {
+            result = null;
+        }
+    }
+
+    if (!response.ok) {
+
+        if (
+            response.status === 409
+        ) {
+            throw new Error(
+                "DUPLICATE"
+            );
+        }
+
+        if (
+            response.status === 404
+        ) {
+            throw new Error(
+                "NOT_FOUND"
+            );
+        }
+
+        throw new Error(
+            "HTTP " +
+            response.status
+        );
+    }
+
+    return result;
+}
+
+
+/* เริ่มต้น LIFF */
+async function initializeLiff() {
+
+    const systemStatus =
+        document.getElementById(
+            "systemStatus"
+        );
+
+    try {
+
+        await liff.init({
+            liffId: LIFF_ID
+        });
+
+        if (!liff.isLoggedIn()) {
+            liff.login();
+            return;
+        }
+
+        const profile =
+            await liff.getProfile();
+
+        userId =
+            profile.userId || "";
+
+        displayName =
+            profile.displayName || "";
+
+        if (!userId) {
+            throw new Error(
+                "ไม่พบ LINE User ID"
+            );
+        }
+
+        lockPastDates();
+        enableMenus(true);
+
+        systemStatus.innerText =
+            "ระบบพร้อมใช้งาน";
+
+    } catch (error) {
+
+        console.error(error);
+
+        enableMenus(false);
+
+        systemStatus.innerText =
+            "ไม่สามารถเปิดระบบได้";
+
+        await Swal.fire({
+            icon: "error",
+            title:
+                "เปิดระบบไม่สำเร็จ",
+            text:
+                "กรุณาปิดหน้าต่าง แล้วเปิดจาก LINE ใหม่"
+        });
+    }
+}
+
+
+/* ส่งใบลาใหม่ */
+document
+    .getElementById(
+        "newLeaveForm"
+    )
+    .addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+            const button =
+                document.getElementById(
+                    "newLeaveSubmit"
+                );
+
+            const leaveType =
+                document.getElementById(
+                    "leaveType"
+                ).value;
+
+            const startDate =
+                document.getElementById(
+                    "startDate"
+                ).value;
+
+            const endDate =
+                document.getElementById(
+                    "endDate"
+                ).value;
+
+            const totalDays =
+                document.getElementById(
+                    "totalDays"
+                ).value;
+
+            const reason =
+                document.getElementById(
+                    "reason"
+                ).value.trim();
+
+            if (
+                !datesAreValid(
+                    startDate,
+                    endDate
+                )
+            ) {
+
+                await Swal.fire({
+                    icon: "warning",
+                    title:
+                        "วันที่ไม่ถูกต้อง",
+                    text:
+                        "วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มลา"
+                });
+
+                return;
+            }
+
+            const duplicateKey =
+                userId +
+                "_" +
+                leaveType +
+                "_" +
+                startDate +
+                "_" +
+                endDate;
+
+            const storageKey =
+                "leave_" +
+                duplicateKey;
+
+            if (
+                localStorage.getItem(
+                    storageKey
+                )
+            ) {
+
+                await Swal.fire({
+                    icon: "warning",
+                    title:
+                        "ส่งใบลานี้แล้ว",
+                    text:
+                        "ไม่สามารถส่งรายการเดิมซ้ำได้"
+                });
+
+                return;
+            }
+
+            button.disabled = true;
+            button.innerText =
+                "กำลังส่งข้อมูล...";
+
+            const leaveNumber =
+                createLeaveNumber();
+
+            const payload = {
+
+                action:
+                    "create_leave",
+
+                leaveNumber:
+                    leaveNumber,
+
+                userId:
+                    userId,
+
+                displayName:
+                    displayName,
+
+                employeeId: "",
+
+                leaveType:
+                    leaveType,
+
+                startDate:
+                    startDate,
+
+                endDate:
+                    endDate,
+
+                totalDays:
+                    Number(totalDays),
+
+                reason:
+                    reason,
+
+                leaveStatus:
+                    "รออนุมัติ",
+
+                duplicateKey:
+                    duplicateKey,
+
+                timestamp:
+                    new Date()
+                    .toISOString(),
+
+                timeThai:
+                    getBangkokDateTime(),
+
+                source:
+                    "LIFF"
+            };
+
+            try {
+
+                await sendToMake(
+                    payload
+                );
+
+                localStorage.setItem(
+                    storageKey,
+                    JSON.stringify({
+                        leaveNumber:
+                            leaveNumber,
+                        timeThai:
+                            payload.timeThai
+                    })
+                );
+
+                await Swal.fire({
+                    icon: "success",
+                    title:
+                        "ส่งใบลาสำเร็จ",
+                    html:
+                        "เลขที่ใบลา: " +
+                        leaveNumber +
+                        "<br>สถานะ: รออนุมัติ",
+                    confirmButtonColor:
+                        "#06C755"
+                });
+
+                document
+                    .getElementById(
+                        "newLeaveForm"
+                    )
+                    .reset();
+
+            } catch (error) {
+
+                console.error(error);
+
+                const message =
+                    error.message ===
+                    "DUPLICATE"
+                        ? "ไม่สามารถส่งรายการเดิมซ้ำได้"
+                        : "กรุณาลองใหม่อีกครั้ง";
+
+                await Swal.fire({
+                    icon: "error",
+                    title:
+                        "ส่งข้อมูลไม่สำเร็จ",
+                    text: message
+                });
+
+            } finally {
+
+                button.disabled = false;
+                button.innerText =
+                    "ส่งใบลา";
+            }
+        }
+    );
+
+
+/* ขอเปลี่ยนวันลา */
+document
+    .getElementById(
+        "changeLeaveForm"
+    )
+    .addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+            const button =
+                document.getElementById(
+                    "changeLeaveSubmit"
+                );
+
+            const leaveNumber =
+                document.getElementById(
+                    "leaveNumber"
+                ).value.trim();
+
+            const newStartDate =
+                document.getElementById(
+                    "newStartDate"
+                ).value;
+
+            const newEndDate =
+                document.getElementById(
+                    "newEndDate"
+                ).value;
+
+            const newTotalDays =
+                document.getElementById(
+                    "newTotalDays"
+                ).value;
+
+            const changeReason =
+                document.getElementById(
+                    "changeReason"
+                ).value.trim();
+
+            if (
+                !datesAreValid(
+                    newStartDate,
+                    newEndDate
+                )
+            ) {
+
+                await Swal.fire({
+                    icon: "warning",
+                    title:
+                        "วันที่ไม่ถูกต้อง",
+                    text:
+                        "วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มลา"
+                });
+
+                return;
+            }
+
+            button.disabled = true;
+            button.innerText =
+                "กำลังส่งคำขอ...";
+
+            const payload = {
+
+                action:
+                    "change_leave",
+
+                leaveNumber:
+                    leaveNumber,
+
+                userId:
+                    userId,
+
+                displayName:
+                    displayName,
+
+                newStartDate:
+                    newStartDate,
+
+                newEndDate:
+                    newEndDate,
+
+                newTotalDays:
+                    Number(
+                        newTotalDays
+                    ),
+
+                changeReason:
+                    changeReason,
+
+                changeStatus:
+                    "รออนุมัติการแก้ไข",
+
+                timestamp:
+                    new Date()
+                    .toISOString(),
+
+                timeThai:
+                    getBangkokDateTime(),
+
+                source:
+                    "LIFF"
+            };
+
+            try {
+
+                await sendToMake(
+                    payload
+                );
+
+                await Swal.fire({
+                    icon: "success",
+                    title:
+                        "ส่งคำขอสำเร็จ",
+                    text:
+                        "คำขอเปลี่ยนวันลาถูกส่งให้ผู้อนุมัติแล้ว",
+                    confirmButtonColor:
+                        "#06C755"
+                });
+
+                document
+                    .getElementById(
+                        "changeLeaveForm"
+                    )
+                    .reset();
+
+            } catch (error) {
+
+                console.error(error);
+
+                const message =
+                    error.message ===
+                    "NOT_FOUND"
+                        ? "ไม่พบเลขที่ใบลาหรือรายการนี้ไม่ใช่ของคุณ"
+                        : "กรุณาตรวจสอบข้อมูลแล้วลองใหม่";
+
+                await Swal.fire({
+                    icon: "error",
+                    title:
+                        "ส่งคำขอไม่สำเร็จ",
+                    text: message
+                });
+
+            } finally {
+
+                button.disabled = false;
+                button.innerText =
+                    "ส่งคำขอเปลี่ยนวันลา";
+            }
+        }
+    );
+
+
+/* ตรวจสอบวันลาคงเหลือ */
+async function checkLeaveBalance() {
+
+    const button =
+        document.getElementById(
+            "checkBalanceButton"
+        );
+
+    const resultBox =
+        document.getElementById(
+            "balanceResult"
+        );
+
+    button.disabled = true;
+    button.innerText =
+        "กำลังตรวจสอบ...";
+
+    const payload = {
+
+        action:
+            "check_balance",
+
+        userId:
+            userId,
+
+        displayName:
+            displayName,
+
+        year:
+            new Date()
+            .getFullYear(),
+
+        timestamp:
+            new Date()
+            .toISOString(),
+
+        source:
+            "LIFF"
+    };
+
+    try {
+
+        const result =
+            await sendToMake(
+                payload
+            );
+
+        if (
+            !result ||
+            !result.balance
+        ) {
+
+            throw new Error(
+                "NO_BALANCE_RESPONSE"
+            );
+        }
+
+        document
+            .getElementById(
+                "vacationTotal"
+            )
+            .innerText =
+                result.balance
+                .vacationTotal ??
+                0;
+
+        document
+            .getElementById(
+                "vacationUsed"
+            )
+            .innerText =
+                result.balance
+                .vacationUsed ??
+                0;
+
+        document
+            .getElementById(
+                "vacationRemaining"
+            )
+            .innerText =
+                result.balance
+                .vacationRemaining ??
+                0;
+
+        document
+            .getElementById(
+                "vacationPending"
+            )
+            .innerText =
+                result.balance
+                .vacationPending ??
+                0;
+
+        resultBox.style.display =
+            "block";
+
+    } catch (error) {
+
+        console.error(error);
+
+        await Swal.fire({
+            icon: "error",
+            title:
+                "ตรวจสอบยอดไม่ได้",
+            text:
+                "ระบบ Make ยังไม่ได้ส่งข้อมูลวันลาคงเหลือกลับมา"
+        });
+
+    } finally {
+
+        button.disabled = false;
+        button.innerText =
+            "ตรวจสอบยอดวันลา";
+    }
+}
+
+
+/* เริ่มระบบ */
+initializeLiff();
 </script>
+
 </body>
 </html>
