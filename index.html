@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
+
 <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0">
@@ -29,6 +30,10 @@ body {
     box-shadow: 0 4px 15px rgba(0,0,0,0.08);
 }
 
+h2 {
+    margin-top: 0;
+}
+
 input {
     width: 100%;
     padding: 12px;
@@ -37,6 +42,7 @@ input {
     border: 1px solid #ccc;
     border-radius: 6px;
     font-size: 18px;
+    text-align: center;
 }
 
 .btn {
@@ -72,6 +78,7 @@ input {
         maxlength="2">
 
     <button
+        type="button"
         class="btn"
         id="submitBtn"
         onclick="processClockIn()">
@@ -86,25 +93,81 @@ const WEBHOOK_URL =
 
 const LIFF_ID = "2010214347-gbhKImBf";
 
+let lineUserId = "";
+let displayName = "";
+
+
+/* เริ่มต้นระบบ LIFF */
+async function initializeLiff() {
+
+    try {
+
+        await liff.init({
+            liffId: LIFF_ID
+        });
+
+        if (!liff.isLoggedIn()) {
+            liff.login();
+            return;
+        }
+
+        const profile = await liff.getProfile();
+
+        lineUserId = profile.userId || "";
+        displayName = profile.displayName || "";
+
+    } catch (error) {
+
+        console.error(
+            "LIFF initialization failed:",
+            error
+        );
+
+        await Swal.fire({
+            icon: "error",
+            title: "เปิดระบบไม่สำเร็จ",
+            text: "กรุณาปิดหน้าต่าง แล้วเปิดระบบจาก LINE ใหม่อีกครั้ง"
+        });
+    }
+}
+
+
+/* เริ่มกระบวนการตอกบัตร */
 async function processClockIn() {
 
-    const empIdInput = document.getElementById("empId");
-    const btn = document.getElementById("submitBtn");
-    const empId = empIdInput.value.trim();
+    const empIdInput =
+        document.getElementById("empId");
 
+    const btn =
+        document.getElementById("submitBtn");
+
+    const empId =
+        empIdInput.value.trim();
+
+    /* ตรวจรหัสพนักงาน */
     if (!/^\d{2}$/.test(empId)) {
+
         await Swal.fire({
             icon: "warning",
             title: "กรุณากรอกรหัสพนักงาน",
             text: "กรอกตัวเลขให้ครบ 2 ตัว เช่น 04"
         });
+
+        return;
+    }
+
+    /* ตรวจสอบการเข้าสู่ระบบ LINE */
+    if (!liff.isLoggedIn()) {
+        liff.login();
         return;
     }
 
     btn.disabled = true;
     btn.innerText = "กำลังตรวจสอบตำแหน่ง...";
 
+    /* ตรวจสอบว่าเครื่องรองรับ GPS หรือไม่ */
     if (!navigator.geolocation) {
+
         await Swal.fire({
             icon: "error",
             title: "อุปกรณ์ไม่รองรับ GPS"
@@ -114,75 +177,110 @@ async function processClockIn() {
         return;
     }
 
+    /* ขอพิกัด GPS */
     navigator.geolocation.getCurrentPosition(
 
         async function(position) {
 
             btn.innerText = "กำลังส่งข้อมูล...";
 
-            let lineUserId = "";
-            let displayName = "";
-
             try {
-                if (liff.isLoggedIn()) {
-                    const profile = await liff.getProfile();
 
-                    lineUserId = profile.userId || "";
-                    displayName = profile.displayName || "";
-                }
-            } catch (profileError) {
-                console.warn(
-                    "ไม่สามารถอ่านข้อมูล LINE:",
-                    profileError
+                /*
+                 * อ่านข้อมูล LINE อีกครั้ง
+                 * เพื่อป้องกันกรณีหน้าเว็บโหลดข้อมูลไม่ทัน
+                 */
+                const profile =
+                    await liff.getProfile();
+
+                lineUserId =
+                    profile.userId || "";
+
+                displayName =
+                    profile.displayName || "";
+
+                const now =
+                    new Date();
+
+                /*
+                 * ชื่อฟิลด์ต้องตรงกับฟิลด์ใน Make
+                 */
+                const payload = {
+                    userId: lineUserId,
+                    displayName: displayName,
+                    employeeId: "MT" + empId,
+                    status: "เข้างาน",
+                    latitude:
+                        position.coords.latitude,
+                    longitude:
+                        position.coords.longitude,
+                    accuracy:
+                        position.coords.accuracy,
+                    timestamp:
+                        now.toISOString(),
+                    timeThai:
+                        now.toLocaleString(
+                            "th-TH",
+                            {
+                                timeZone:
+                                    "Asia/Bangkok"
+                            }
+                        ),
+                    source: "LIFF"
+                };
+
+                console.log(
+                    "Sending payload:",
+                    payload
                 );
-            }
 
-            const now = new Date();
-
-            const payload = {
-                action: "clock_in",
-                employeeId: "MT" + empId,
-                lineUserId: lineUserId,
-                displayName: displayName,
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                timestamp: now.toISOString(),
-                timeThai: now.toLocaleString("th-TH", {
-                    timeZone: "Asia/Bangkok"
-                }),
-                source: "LIFF"
-            };
-
-            try {
-                const response = await fetch(WEBHOOK_URL, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(payload)
-                });
+                const response =
+                    await fetch(
+                        WEBHOOK_URL,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body:
+                                JSON.stringify(
+                                    payload
+                                )
+                        }
+                    );
 
                 if (!response.ok) {
                     throw new Error(
-                        "HTTP " + response.status
+                        "HTTP " +
+                        response.status
                     );
                 }
 
                 await Swal.fire({
                     icon: "success",
                     title: "ตอกบัตรสำเร็จ",
-                    text: "บันทึกเวลาและตำแหน่งเรียบร้อยแล้ว",
-                    timer: 1800,
+                    html:
+                        "รหัสพนักงาน: MT" +
+                        empId +
+                        "<br>เวลา: " +
+                        payload.timeThai,
+                    timer: 2200,
                     showConfirmButton: false
                 });
+
+                empIdInput.value = "";
 
                 if (liff.isInClient()) {
                     liff.closeWindow();
                 }
 
             } catch (error) {
-                console.error(error);
+
+                console.error(
+                    "ส่งข้อมูลไม่สำเร็จ:",
+                    error
+                );
 
                 await Swal.fire({
                     icon: "error",
@@ -196,15 +294,20 @@ async function processClockIn() {
 
         async function(error) {
 
-            let message = "กรุณาเปิด GPS แล้วลองใหม่";
+            let message =
+                "กรุณาเปิด GPS แล้วลองใหม่";
 
             if (error.code === 1) {
                 message =
                     "กรุณาอนุญาตให้ระบบเข้าถึงตำแหน่ง";
-            } else if (error.code === 2) {
+            }
+
+            if (error.code === 2) {
                 message =
                     "ไม่สามารถตรวจหาตำแหน่งได้";
-            } else if (error.code === 3) {
+            }
+
+            if (error.code === 3) {
                 message =
                     "ค้นหาตำแหน่งใช้เวลานานเกินไป";
             }
@@ -226,38 +329,20 @@ async function processClockIn() {
     );
 }
 
+
+/* คืนสถานะปุ่ม */
 function resetButton() {
-    const btn = document.getElementById("submitBtn");
+
+    const btn =
+        document.getElementById("submitBtn");
 
     btn.disabled = false;
     btn.innerText = "กดเพื่อตอกบัตร";
 }
 
-async function main() {
-    try {
-        await liff.init({
-            liffId: LIFF_ID
-        });
 
-        if (!liff.isLoggedIn()) {
-            liff.login();
-        }
-
-    } catch (error) {
-        console.error(
-            "LIFF initialization failed:",
-            error
-        );
-
-        Swal.fire({
-            icon: "error",
-            title: "เปิดระบบไม่สำเร็จ",
-            text: "กรุณาปิดหน้าต่างแล้วเปิดจาก LINE อีกครั้ง"
-        });
-    }
-}
-
-main();
+/* เริ่มระบบ */
+initializeLiff();
 </script>
 
 </body>
