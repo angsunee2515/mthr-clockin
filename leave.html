@@ -25,7 +25,7 @@ body {
     max-width: 430px;
     margin: auto;
     padding: 24px;
-    background: white;
+    background: #fff;
     border-radius: 16px;
     box-shadow: 0 4px 14px rgba(0,0,0,0.10);
 }
@@ -56,7 +56,7 @@ h2 {
     width: 100%;
     padding: 13px;
     color: #06C755;
-    background: white;
+    background: #fff;
     border: 2px solid #06C755;
     border-radius: 9px;
     cursor: pointer;
@@ -65,8 +65,14 @@ h2 {
 }
 
 .menu-button.active {
-    color: white;
+    color: #fff;
     background: #06C755;
+}
+
+.menu-button:disabled {
+    color: #fff;
+    background: #aaa;
+    border-color: #aaa;
 }
 
 .section {
@@ -93,7 +99,7 @@ textarea {
     padding: 11px;
     font-family: inherit;
     font-size: 15px;
-    background: white;
+    background: #fff;
     border: 1px solid #ccc;
     border-radius: 8px;
 }
@@ -107,7 +113,7 @@ textarea {
     width: 100%;
     margin-top: 20px;
     padding: 14px;
-    color: white;
+    color: #fff;
     background: #06C755;
     border: none;
     border-radius: 9px;
@@ -116,12 +122,8 @@ textarea {
     font-weight: bold;
 }
 
-.submit-button:disabled,
-.menu-button:disabled {
-    color: white;
+.submit-button:disabled {
     background: #aaa;
-    border-color: #aaa;
-    cursor: not-allowed;
 }
 
 .balance-card {
@@ -135,7 +137,7 @@ textarea {
 .balance-row {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
+    padding: 9px 0;
     border-bottom: 1px solid #dce8d7;
 }
 
@@ -167,6 +169,7 @@ textarea {
     <div class="menu">
 
         <button
+            type="button"
             class="menu-button active"
             id="newLeaveMenu"
             onclick="showSection('newLeave')"
@@ -175,6 +178,7 @@ textarea {
         </button>
 
         <button
+            type="button"
             class="menu-button"
             id="changeLeaveMenu"
             onclick="showSection('changeLeave')"
@@ -183,6 +187,7 @@ textarea {
         </button>
 
         <button
+            type="button"
             class="menu-button"
             id="balanceMenu"
             onclick="showSection('balance')"
@@ -294,7 +299,7 @@ textarea {
             <input
                 type="text"
                 id="leaveNumber"
-                placeholder="เช่น LV20260720123456"
+                placeholder="กรอกเลขที่ใบลาเดิม"
                 required>
 
             <label for="newStartDate">
@@ -400,13 +405,13 @@ const LIFF_ID =
     "2010214347-3cJ4grN3";
 
 const WEBHOOK_URL =
-    "https://hook.eu1.make.com/c4k3xn8vl8ryu5p82qjbwt2ht7xm1bhv";
+    "https://hook.eu1.make.com/yi5ctmlgjvtkg14kq4y81vd9yjbqh64s";
 
 let userId = "";
 let displayName = "";
 
 
-/* วันที่ปัจจุบันตามเวลาประเทศไทย */
+/* วันที่ตามเวลาประเทศไทย */
 function getBangkokDate() {
 
     return new Intl.DateTimeFormat(
@@ -424,8 +429,6 @@ function getBangkokDate() {
 /* วันและเวลาไทย */
 function getBangkokDateTime() {
 
-    const now = new Date();
-
     const parts =
         new Intl.DateTimeFormat(
             "en-GB",
@@ -439,7 +442,9 @@ function getBangkokDateTime() {
                 second: "2-digit",
                 hour12: false
             }
-        ).formatToParts(now);
+        ).formatToParts(
+            new Date()
+        );
 
     const values = {};
 
@@ -466,15 +471,14 @@ function getBangkokDateTime() {
 /* สร้างเลขที่ใบลา */
 function createLeaveNumber() {
 
-    const now = new Date();
-
     const datePart =
         getBangkokDate()
         .replaceAll("-", "");
 
     const timePart =
-        String(now.getTime())
-        .slice(-6);
+        String(
+            Date.now()
+        ).slice(-6);
 
     return (
         "LV" +
@@ -497,7 +501,7 @@ function enableMenus(enabled) {
 }
 
 
-/* เปลี่ยนหน้าเมนู */
+/* เปลี่ยนเมนู */
 function showSection(sectionId) {
 
     document
@@ -548,7 +552,7 @@ function showSection(sectionId) {
 }
 
 
-/* ป้องกันวันที่ย้อนหลัง */
+/* ล็อกวันที่ย้อนหลัง */
 function lockPastDates() {
 
     const today =
@@ -560,6 +564,7 @@ function lockPastDates() {
         "newStartDate",
         "newEndDate"
     ].forEach(function(id) {
+
         document
             .getElementById(id)
             .min = today;
@@ -567,7 +572,7 @@ function lockPastDates() {
 }
 
 
-/* ตรวจวันที่เริ่มและสิ้นสุด */
+/* ตรวจสอบวันที่ */
 function datesAreValid(
     startDate,
     endDate
@@ -581,7 +586,7 @@ function datesAreValid(
 }
 
 
-/* เรียก Make Webhook */
+/* ส่งข้อมูลไป Make */
 async function sendToMake(payload) {
 
     const response =
@@ -604,23 +609,11 @@ async function sendToMake(payload) {
 
     let result = null;
 
-    const contentType =
-        response.headers.get(
-            "content-type"
-        ) || "";
-
-    if (
-        contentType.includes(
-            "application/json"
-        )
-    ) {
-
-        try {
-            result =
-                await response.json();
-        } catch (error) {
-            result = null;
-        }
+    try {
+        result =
+            await response.json();
+    } catch (error) {
+        result = null;
     }
 
     if (!response.ok) {
@@ -651,7 +644,7 @@ async function sendToMake(payload) {
 }
 
 
-/* เริ่มต้น LIFF */
+/* เริ่มระบบ LINE LIFF */
 async function initializeLiff() {
 
     const systemStatus =
@@ -779,13 +772,10 @@ document
                 "_" +
                 endDate;
 
-            const storageKey =
-                "leave_" +
-                duplicateKey;
-
             if (
                 localStorage.getItem(
-                    storageKey
+                    "leave_" +
+                    duplicateKey
                 )
             ) {
 
@@ -862,13 +852,9 @@ document
                 );
 
                 localStorage.setItem(
-                    storageKey,
-                    JSON.stringify({
-                        leaveNumber:
-                            leaveNumber,
-                        timeThai:
-                            payload.timeThai
-                    })
+                    "leave_" +
+                    duplicateKey,
+                    leaveNumber
                 );
 
                 await Swal.fire({
@@ -893,17 +879,12 @@ document
 
                 console.error(error);
 
-                const message =
-                    error.message ===
-                    "DUPLICATE"
-                        ? "ไม่สามารถส่งรายการเดิมซ้ำได้"
-                        : "กรุณาลองใหม่อีกครั้ง";
-
                 await Swal.fire({
                     icon: "error",
                     title:
                         "ส่งข้อมูลไม่สำเร็จ",
-                    text: message
+                    text:
+                        "กรุณาลองใหม่อีกครั้ง"
                 });
 
             } finally {
@@ -1032,7 +1013,7 @@ document
                     title:
                         "ส่งคำขอสำเร็จ",
                     text:
-                        "คำขอเปลี่ยนวันลาถูกส่งให้ผู้อนุมัติแล้ว",
+                        "ส่งคำขอเปลี่ยนวันลาให้ผู้อนุมัติแล้ว",
                     confirmButtonColor:
                         "#06C755"
                 });
@@ -1047,17 +1028,12 @@ document
 
                 console.error(error);
 
-                const message =
-                    error.message ===
-                    "NOT_FOUND"
-                        ? "ไม่พบเลขที่ใบลาหรือรายการนี้ไม่ใช่ของคุณ"
-                        : "กรุณาตรวจสอบข้อมูลแล้วลองใหม่";
-
                 await Swal.fire({
                     icon: "error",
                     title:
                         "ส่งคำขอไม่สำเร็จ",
-                    text: message
+                    text:
+                        "กรุณาตรวจสอบเลขที่ใบลาแล้วลองใหม่"
                 });
 
             } finally {
@@ -1070,17 +1046,12 @@ document
     );
 
 
-/* ตรวจสอบวันลาคงเหลือ */
+/* ตรวจสอบยอดวันลา */
 async function checkLeaveBalance() {
 
     const button =
         document.getElementById(
             "checkBalanceButton"
-        );
-
-    const resultBox =
-        document.getElementById(
-            "balanceResult"
         );
 
     button.disabled = true;
@@ -1099,8 +1070,8 @@ async function checkLeaveBalance() {
             displayName,
 
         year:
-            new Date()
-            .getFullYear(),
+            getBangkokDate()
+            .slice(0,4),
 
         timestamp:
             new Date()
@@ -1123,7 +1094,7 @@ async function checkLeaveBalance() {
         ) {
 
             throw new Error(
-                "NO_BALANCE_RESPONSE"
+                "NO_BALANCE"
             );
         }
 
@@ -1133,8 +1104,7 @@ async function checkLeaveBalance() {
             )
             .innerText =
                 result.balance
-                .vacationTotal ??
-                0;
+                .vacationTotal ?? 0;
 
         document
             .getElementById(
@@ -1142,8 +1112,7 @@ async function checkLeaveBalance() {
             )
             .innerText =
                 result.balance
-                .vacationUsed ??
-                0;
+                .vacationUsed ?? 0;
 
         document
             .getElementById(
@@ -1151,8 +1120,7 @@ async function checkLeaveBalance() {
             )
             .innerText =
                 result.balance
-                .vacationRemaining ??
-                0;
+                .vacationRemaining ?? 0;
 
         document
             .getElementById(
@@ -1160,11 +1128,14 @@ async function checkLeaveBalance() {
             )
             .innerText =
                 result.balance
-                .vacationPending ??
-                0;
+                .vacationPending ?? 0;
 
-        resultBox.style.display =
-            "block";
+        document
+            .getElementById(
+                "balanceResult"
+            )
+            .style.display =
+                "block";
 
     } catch (error) {
 
@@ -1175,7 +1146,7 @@ async function checkLeaveBalance() {
             title:
                 "ตรวจสอบยอดไม่ได้",
             text:
-                "ระบบ Make ยังไม่ได้ส่งข้อมูลวันลาคงเหลือกลับมา"
+                "กรุณาตั้งค่าเส้นทาง check_balance ใน Make ก่อน"
         });
 
     } finally {
