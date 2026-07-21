@@ -1,563 +1,655 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0">
+    <title>ระบบตอกบัตรพนักงาน</title>
 
-<title>ระบบตอกบัตร</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-<style>
-body {
-    margin: 0;
-    padding: 20px;
-    font-family: sans-serif;
-    text-align: center;
-    background: #f5f5f5;
-}
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 20px;
+            font-family: "Sarabun", Arial, sans-serif;
+            color: #263238;
+            background: linear-gradient(135deg, #e8f5e9, #f5f7fa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.card {
-    max-width: 400px;
-    margin: 70px auto 0;
-    padding: 32px 24px;
-    background: #ffffff;
-    border: 1px solid #dddddd;
-    border-radius: 16px;
-    box-shadow: 0 5px 18px rgba(0,0,0,0.10);
-}
+        .card {
+            width: 100%;
+            max-width: 420px;
+            padding: 26px 22px;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            text-align: center;
+        }
 
-.icon {
-    margin-bottom: 12px;
-    font-size: 65px;
-}
+        .logo {
+            width: 76px;
+            height: 76px;
+            margin: 0 auto 15px;
+            border-radius: 50%;
+            background: #06c755;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+        }
 
-h2 {
-    margin: 10px 0 30px;
-    color: #222222;
-}
+        h1 {
+            margin: 0 0 8px;
+            color: #06a944;
+            font-size: 25px;
+        }
 
-.btn {
-    width: 100%;
-    padding: 18px;
-    color: #ffffff;
-    background: #06C755;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 20px;
-    font-weight: bold;
-}
+        .description {
+            margin: 0 0 18px;
+            color: #607d8b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
 
-.btn:disabled {
-    background: #aaaaaa;
-    cursor: not-allowed;
-}
+        .status-box {
+            margin-bottom: 18px;
+            padding: 13px;
+            border-radius: 12px;
+            background: #f1f8e9;
+            color: #33691e;
+            font-size: 14px;
+            line-height: 1.6;
+        }
 
-.note {
-    margin-top: 20px;
-    color: #777777;
-    font-size: 14px;
-}
-</style>
+        .clock {
+            margin-bottom: 18px;
+            font-size: 26px;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: 0;
+            border-radius: 12px;
+            background: #06c755;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #05a847;
+        }
+
+        .btn:disabled {
+            background: #a5d6a7;
+            cursor: not-allowed;
+        }
+
+        .note {
+            margin-top: 16px;
+            color: #78909c;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
 
 <div class="card">
+    <div class="logo">⏱️</div>
 
-    <div class="icon">⏰</div>
+    <h1>ระบบตอกบัตรเข้างาน</h1>
 
-    <h2>ระบบตอกบัตรเข้างาน</h2>
+    <p class="description">
+        กรุณาเปิด GPS และอยู่ภายในระยะ 500 เมตร<br>
+        จากสำนักงานใหญ่หรือสาขาชลบุรี
+    </p>
+
+    <div class="status-box" id="statusBox">
+        กำลังเชื่อมต่อกับ LINE...
+    </div>
+
+    <div class="clock" id="clock">--:--:--</div>
 
     <button
         type="button"
         class="btn"
-        id="clockInBtn"
-        onclick="clockIn()"
-        disabled>
-        กำลังเปิดระบบ...
+        id="submitBtn"
+        disabled
+    >
+        กำลังเตรียมระบบ...
     </button>
 
     <div class="note">
-        กดตอกบัตรได้วันละ 1 ครั้ง
+        ระบบจะบันทึก LINE User ID ชื่อ พิกัด สาขา<br>
+        วันเวลา ระยะห่าง และสถานะมาทันหรือมาสาย
     </div>
-
 </div>
 
 <script>
-const WEBHOOK_URL =
-    "https://hook.eu1.make.com/mjthdfbofhwaaxjai15ktaga2yw9f4qb";
+    "use strict";
 
-const LIFF_ID =
-    "2010214347-gbhKImBf";
+    /*
+     * ==========================================
+     * การตั้งค่าระบบ
+     * ==========================================
+     */
 
-let userId = "";
-let displayName = "";
+    const LIFF_ID = "2010214347-gbhKImBf";
 
+    const WEBHOOK_URL =
+        "https://hook.eu1.make.com/mjthdfbofhwaaxjai15ktaga2yw9f4qb";
 
-/* อ่านส่วนประกอบวันเวลาประเทศไทย */
-function getBangkokDateTime() {
+    // ระยะที่อนุญาตจากสำนักงาน
+    const MAX_DISTANCE_METERS = 500;
 
-    const now = new Date();
+    // ความคลาดเคลื่อนของ GPS ที่ยอมรับได้
+    const MAX_GPS_ACCURACY_METERS = 200;
 
-    const parts =
-        new Intl.DateTimeFormat(
-            "en-GB",
-            {
-                timeZone: "Asia/Bangkok",
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: false
+    // เวลาเริ่มงาน: หลัง 09:00:00 ถือว่าสาย
+    const WORK_START_HOUR = 9;
+    const WORK_START_MINUTE = 0;
+    const WORK_START_SECOND = 0;
+
+    // พิกัดสำนักงาน
+    const OFFICES = [
+        {
+            id: "HEAD_OFFICE",
+            name: "สำนักงานใหญ่",
+            latitude: 13.92814249,
+            longitude: 100.4830389
+        },
+        {
+            id: "CHONBURI",
+            name: "สาขาชลบุรี",
+            latitude: 13.2704376,
+            longitude: 100.9490233
+        }
+    ];
+
+    /*
+     * ==========================================
+     * ตัวแปรผู้ใช้งาน
+     * ==========================================
+     */
+
+    let lineUserId = "";
+    let lineDisplayName = "";
+    let isSubmitting = false;
+
+    const submitBtn = document.getElementById("submitBtn");
+    const statusBox = document.getElementById("statusBox");
+    const clockElement = document.getElementById("clock");
+
+    /*
+     * ==========================================
+     * ฟังก์ชันวันเวลาไทย
+     * ==========================================
+     */
+
+    function getBangkokDateParts() {
+        const parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Bangkok",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hourCycle: "h23"
+        }).formatToParts(new Date());
+
+        const result = {};
+
+        parts.forEach(part => {
+            if (part.type !== "literal") {
+                result[part.type] = part.value;
             }
-        ).formatToParts(now);
-
-    const values = {};
-
-    parts.forEach(function(part) {
-        values[part.type] = part.value;
-    });
-
-    const dateKey =
-        values.year +
-        "-" +
-        values.month +
-        "-" +
-        values.day;
-
-    const timeOnly =
-        values.hour +
-        ":" +
-        values.minute +
-        ":" +
-        values.second;
-
-    const timeThai =
-        values.day +
-        "/" +
-        values.month +
-        "/" +
-        values.year +
-        " " +
-        timeOnly;
-
-    return {
-        now: now,
-        dateKey: dateKey,
-        timeOnly: timeOnly,
-        timeThai: timeThai
-    };
-}
-
-
-/* ตรวจสอบมาทันหรือสาย */
-function getArrivalStatus(timeOnly) {
-
-    if (timeOnly <= "09:00:00") {
-        return "มาทัน";
-    }
-
-    return "สาย";
-}
-
-
-/* เปลี่ยนข้อความและสถานะของปุ่ม */
-function setButton(text, disabled) {
-
-    const btn =
-        document.getElementById(
-            "clockInBtn"
-        );
-
-    btn.innerText = text;
-    btn.disabled = disabled;
-}
-
-
-/* เริ่มต้นระบบ LINE LIFF */
-async function initializeLiff() {
-
-    try {
-
-        await liff.init({
-            liffId: LIFF_ID
         });
 
-        if (!liff.isLoggedIn()) {
-            liff.login();
+        return result;
+    }
+
+    function getThaiDateTime() {
+        const p = getBangkokDateParts();
+
+        return {
+            date: `${p.year}-${p.month}-${p.day}`,
+            time: `${p.hour}:${p.minute}:${p.second}`,
+            display: `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}:${p.second}`,
+            iso: new Date().toISOString(),
+            hour: Number(p.hour),
+            minute: Number(p.minute),
+            second: Number(p.second)
+        };
+    }
+
+    function getArrivalStatus(dateTime) {
+        const currentSeconds =
+            (dateTime.hour * 3600) +
+            (dateTime.minute * 60) +
+            dateTime.second;
+
+        const startSeconds =
+            (WORK_START_HOUR * 3600) +
+            (WORK_START_MINUTE * 60) +
+            WORK_START_SECOND;
+
+        return currentSeconds <= startSeconds ? "มาทัน" : "สาย";
+    }
+
+    function updateClock() {
+        const dateTime = getThaiDateTime();
+        clockElement.textContent = dateTime.time;
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    /*
+     * ==========================================
+     * คำนวณระยะทางด้วยสูตร Haversine
+     * ==========================================
+     */
+
+    function toRadians(degrees) {
+        return degrees * Math.PI / 180;
+    }
+
+    function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+        const earthRadius = 6371000;
+
+        const latitudeDifference = toRadians(lat2 - lat1);
+        const longitudeDifference = toRadians(lon2 - lon1);
+
+        const a =
+            Math.sin(latitudeDifference / 2) *
+            Math.sin(latitudeDifference / 2) +
+            Math.cos(toRadians(lat1)) *
+            Math.cos(toRadians(lat2)) *
+            Math.sin(longitudeDifference / 2) *
+            Math.sin(longitudeDifference / 2);
+
+        const c = 2 * Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+        );
+
+        return earthRadius * c;
+    }
+
+    function findNearestOffice(latitude, longitude) {
+        let nearestOffice = null;
+
+        OFFICES.forEach(office => {
+            const distance = calculateDistanceMeters(
+                latitude,
+                longitude,
+                office.latitude,
+                office.longitude
+            );
+
+            if (
+                nearestOffice === null ||
+                distance < nearestOffice.distanceMeters
+            ) {
+                nearestOffice = {
+                    ...office,
+                    distanceMeters: distance
+                };
+            }
+        });
+
+        return nearestOffice;
+    }
+
+    /*
+     * ==========================================
+     * ตรวจสอบการตอกบัตรซ้ำ
+     * ==========================================
+     */
+
+    function getAttendanceStorageKey(date) {
+        return `attendance_${lineUserId}_${date}`;
+    }
+
+    function hasClockedInToday(date) {
+        const storageKey = getAttendanceStorageKey(date);
+        return localStorage.getItem(storageKey) === "success";
+    }
+
+    function saveClockInSuccess(date) {
+        const storageKey = getAttendanceStorageKey(date);
+        localStorage.setItem(storageKey, "success");
+    }
+
+    /*
+     * ==========================================
+     * ขอพิกัดจากโทรศัพท์
+     * ==========================================
+     */
+
+    function getCurrentLocation() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(
+                    new Error("โทรศัพท์เครื่องนี้ไม่รองรับการตรวจสอบ GPS")
+                );
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                position => resolve(position),
+                error => reject(error),
+                {
+                    enableHighAccuracy: true,
+                    timeout: 20000,
+                    maximumAge: 0
+                }
+            );
+        });
+    }
+
+    function getLocationErrorMessage(error) {
+        if (!error) {
+            return "ไม่สามารถตรวจสอบตำแหน่งได้";
+        }
+
+        switch (error.code) {
+            case 1:
+                return "กรุณาอนุญาตให้ระบบเข้าถึงตำแหน่ง GPS";
+            case 2:
+                return "ไม่สามารถตรวจสอบตำแหน่งได้ กรุณาเปิด GPS แล้วลองใหม่";
+            case 3:
+                return "ตรวจสอบตำแหน่งนานเกินไป กรุณาออกไปยังบริเวณที่รับสัญญาณ GPS ได้ดี";
+            default:
+                return error.message || "ไม่สามารถตรวจสอบตำแหน่งได้";
+        }
+    }
+
+    /*
+     * ==========================================
+     * ส่งข้อมูลตอกบัตร
+     * ==========================================
+     */
+
+    async function processClockIn() {
+        if (isSubmitting) {
             return;
         }
 
-        /*
-         * อ่านข้อมูล LINE เบื้องหลัง
-         * ไม่แสดงให้พนักงานเห็น
-         */
-        const profile =
-            await liff.getProfile();
-
-        userId =
-            profile.userId || "";
-
-        displayName =
-            profile.displayName || "";
-
-        if (!userId) {
-            throw new Error(
-                "ไม่พบ LINE User ID"
-            );
-        }
-
-        setButton(
-            "ตอกบัตรเข้างาน",
-            false
-        );
-
-    } catch (error) {
-
-        console.error(
-            "LIFF error:",
-            error
-        );
-
-        setButton(
-            "เปิดระบบไม่สำเร็จ",
-            true
-        );
-
-        await Swal.fire({
-            icon: "error",
-            title: "เปิดระบบไม่สำเร็จ",
-            text:
-                "กรุณาปิดหน้าต่าง แล้วเปิดระบบจาก LINE ใหม่"
-        });
-    }
-}
-
-
-/* กระบวนการตอกบัตร */
-async function clockIn() {
-
-    if (!userId) {
-
-        await Swal.fire({
-            icon: "error",
-            title: "ไม่พบข้อมูล LINE",
-            text:
-                "กรุณาปิดหน้าต่าง แล้วเปิดระบบจาก LINE ใหม่"
-        });
-
-        return;
-    }
-
-    const bangkok =
-        getBangkokDateTime();
-
-    const arrivalStatus =
-        getArrivalStatus(
-            bangkok.timeOnly
-        );
-
-    /*
-     * LINE User ID + วันที่
-     * ใช้เป็นรหัสรายการตอกบัตร
-     */
-    const attendanceKey =
-        userId +
-        "_" +
-        bangkok.dateKey;
-
-    const storageKey =
-        "clockin_" +
-        attendanceKey;
-
-    /*
-     * ตรวจสอบการตอกซ้ำในเครื่องเดิม
-     */
-    const previousClockIn =
-        localStorage.getItem(
-            storageKey
-        );
-
-    if (previousClockIn) {
-
-        let previousData = {};
-
-        try {
-
-            previousData =
-                JSON.parse(
-                    previousClockIn
-                );
-
-        } catch (error) {
-
-            previousData = {};
-        }
-
-        await Swal.fire({
-            icon: "warning",
-            title: "ตอกบัตรแล้ว",
-            html:
-                "วันนี้คุณตอกบัตรเรียบร้อยแล้ว" +
-                (
-                    previousData.timeThai
-                        ? "<br>เวลา: " +
-                          previousData.timeThai
-                        : ""
-                ),
-            confirmButtonText: "ตกลง"
-        });
-
-        return;
-    }
-
-    setButton(
-        "กำลังตรวจสอบตำแหน่ง...",
-        true
-    );
-
-    if (!navigator.geolocation) {
-
-        await Swal.fire({
-            icon: "error",
-            title:
-                "อุปกรณ์ไม่รองรับ GPS"
-        });
-
-        setButton(
-            "ตอกบัตรเข้างาน",
-            false
-        );
-
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-
-        async function(position) {
-
-            try {
-
-                setButton(
-                    "กำลังส่งข้อมูล...",
-                    true
-                );
-
-                /*
-                 * อ่านข้อมูล LINE อีกครั้ง
-                 */
-                const profile =
-                    await liff.getProfile();
-
-                userId =
-                    profile.userId || "";
-
-                displayName =
-                    profile.displayName || "";
-
-                /*
-                 * ข้อมูลที่ส่งไป Make
-                 * แต่ไม่แสดงบนหน้าจอพนักงาน
-                 */
-                const payload = {
-
-                    userId: userId,
-
-                    displayName:
-                        displayName,
-
-                    employeeId: "",
-
-                    status: "เข้างาน",
-
-                    latitude:
-                        position.coords.latitude,
-
-                    longitude:
-                        position.coords.longitude,
-
-                    accuracy:
-                        position.coords.accuracy,
-
-                    timestamp:
-                        bangkok.now.toISOString(),
-
-                    timeThai:
-                        bangkok.timeThai,
-
-                    attendanceDate:
-                        bangkok.dateKey,
-
-                    attendanceTime:
-                        bangkok.timeOnly,
-
-                    summaryStatus:
-                        arrivalStatus,
-
-                    attendanceKey:
-                        attendanceKey,
-
-                    source: "LIFF"
-                };
-
-                console.log(
-                    "Sending payload:",
-                    payload
-                );
-
-                const response =
-                    await fetch(
-                        WEBHOOK_URL,
-                        {
-                            method: "POST",
-
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-
-                            body:
-                                JSON.stringify(
-                                    payload
-                                )
-                        }
-                    );
-
-                if (!response.ok) {
-
-                    if (
-                        response.status === 409
-                    ) {
-
-                        throw new Error(
-                            "DUPLICATE"
-                        );
-                    }
-
-                    throw new Error(
-                        "HTTP " +
-                        response.status
-                    );
-                }
-
-                /*
-                 * บันทึกว่าตอกบัตรแล้ว
-                 */
-                localStorage.setItem(
-                    storageKey,
-                    JSON.stringify({
-                        timeThai:
-                            bangkok.timeThai,
-
-                        summaryStatus:
-                            arrivalStatus
-                    })
-                );
-
-                await Swal.fire({
-                    icon: "success",
-                    title:
-                        "ตอกบัตรสำเร็จ",
-                    text:
-                        "บันทึกเวลาเรียบร้อยแล้ว",
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-
-                if (liff.isInClient()) {
-                    liff.closeWindow();
-                }
-
-            } catch (error) {
-
-                console.error(
-                    "Clock-in error:",
-                    error
-                );
-
-                if (
-                    error.message ===
-                    "DUPLICATE"
-                ) {
-
-                    await Swal.fire({
-                        icon: "warning",
-                        title:
-                            "ตอกบัตรแล้ว",
-                        text:
-                            "วันนี้คุณตอกบัตรเรียบร้อยแล้ว"
-                    });
-
-                } else {
-
-                    await Swal.fire({
-                        icon: "error",
-                        title:
-                            "ส่งข้อมูลไม่สำเร็จ",
-                        text:
-                            error.message
-                    });
-                }
-
-                setButton(
-                    "ตอกบัตรเข้างาน",
-                    false
-                );
-            }
-        },
-
-        async function(error) {
-
-            let message =
-                "กรุณาเปิด GPS แล้วลองใหม่";
-
-            if (error.code === 1) {
-                message =
-                    "กรุณาอนุญาตให้ระบบเข้าถึงตำแหน่ง";
-            }
-
-            if (error.code === 2) {
-                message =
-                    "ไม่สามารถตรวจหาตำแหน่งได้";
-            }
-
-            if (error.code === 3) {
-                message =
-                    "ค้นหาตำแหน่งใช้เวลานานเกินไป";
-            }
-
+        if (!lineUserId) {
             await Swal.fire({
                 icon: "warning",
-                title:
-                    "ไม่สามารถใช้ GPS",
-                text: message
+                title: "ยังไม่พบข้อมูล LINE",
+                text: "กรุณาเปิดระบบจากภายในแอป LINE แล้วลองใหม่"
+            });
+            return;
+        }
+
+        const dateTime = getThaiDateTime();
+
+        if (hasClockedInToday(dateTime.date)) {
+            await Swal.fire({
+                icon: "info",
+                title: "ตอกบัตรแล้ว",
+                text: "คุณได้ตอกบัตรเข้างานของวันนี้เรียบร้อยแล้ว"
+            });
+            return;
+        }
+
+        isSubmitting = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = "กำลังตรวจสอบ GPS...";
+        statusBox.textContent = "กำลังค้นหาสำนักงานที่อยู่ใกล้ที่สุด...";
+
+        try {
+            const position = await getCurrentLocation();
+
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const accuracy = position.coords.accuracy || 0;
+
+            if (
+                accuracy > MAX_GPS_ACCURACY_METERS
+            ) {
+                throw new Error(
+                    `สัญญาณ GPS ยังไม่แม่นยำ (คลาดเคลื่อนประมาณ ${Math.round(accuracy)} เมตร) ` +
+                    "กรุณาออกไปบริเวณโล่งแล้วลองใหม่"
+                );
+            }
+
+            const nearestOffice = findNearestOffice(
+                latitude,
+                longitude
+            );
+
+            if (!nearestOffice) {
+                throw new Error("ไม่พบข้อมูลสำนักงาน");
+            }
+
+            const roundedDistance =
+                Math.round(nearestOffice.distanceMeters);
+
+            if (
+                nearestOffice.distanceMeters >
+                MAX_DISTANCE_METERS
+            ) {
+                await Swal.fire({
+                    icon: "error",
+                    title: "อยู่นอกพื้นที่ตอกบัตร",
+                    html:
+                        `สำนักงานที่ใกล้ที่สุด: <b>${nearestOffice.name}</b><br>` +
+                        `คุณอยู่ห่างประมาณ <b>${roundedDistance.toLocaleString()} เมตร</b><br>` +
+                        `ต้องอยู่ภายในระยะ <b>${MAX_DISTANCE_METERS} เมตร</b>`
+                });
+
+                statusBox.textContent =
+                    `อยู่นอกพื้นที่ ${nearestOffice.name} ระยะประมาณ ${roundedDistance} เมตร`;
+
+                return;
+            }
+
+            const latestDateTime = getThaiDateTime();
+            const summaryStatus = getArrivalStatus(latestDateTime);
+
+            const attendanceKey =
+                `${lineUserId}_${latestDateTime.date}_clock_in`;
+
+            const payload = {
+                action: "clock_in",
+
+                userId: lineUserId,
+                displayName: lineDisplayName,
+                employeeId: "",
+
+                status: "เข้างาน",
+                summaryStatus: summaryStatus,
+
+                latitude: latitude,
+                longitude: longitude,
+                accuracy: Math.round(accuracy),
+
+                branchId: nearestOffice.id,
+                branchName: nearestOffice.name,
+
+                officeLatitude: nearestOffice.latitude,
+                officeLongitude: nearestOffice.longitude,
+
+                distanceMeters: roundedDistance,
+                maxDistanceMeters: MAX_DISTANCE_METERS,
+                insideGeofence: true,
+
+                attendanceDate: latestDateTime.date,
+                attendanceTime: latestDateTime.time,
+                timeThai: latestDateTime.display,
+                timestamp: latestDateTime.iso,
+
+                attendanceKey: attendanceKey,
+                duplicateKey: attendanceKey,
+
+                source: "LIFF"
+            };
+
+            submitBtn.textContent = "กำลังบันทึกข้อมูล...";
+            statusBox.textContent =
+                `ตรวจพบ ${nearestOffice.name} ระยะประมาณ ${roundedDistance} เมตร`;
+
+            const response = await fetch(WEBHOOK_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
             });
 
-            setButton(
-                "ตอกบัตรเข้างาน",
-                false
-            );
-        },
+            if (!response.ok) {
+                throw new Error(
+                    `ระบบบันทึกข้อมูลขัดข้อง (HTTP ${response.status})`
+                );
+            }
 
-        {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0
+            saveClockInSuccess(latestDateTime.date);
+
+            await Swal.fire({
+                icon: "success",
+                title: "ตอกบัตรสำเร็จ",
+                html:
+                    `<b>${lineDisplayName}</b><br>` +
+                    `${nearestOffice.name}<br>` +
+                    `เวลา ${latestDateTime.time} น.<br>` +
+                    `ระยะห่าง ${roundedDistance} เมตร<br>` +
+                    `สถานะ: <b>${summaryStatus}</b>`,
+                confirmButtonColor: "#06c755"
+            });
+
+            statusBox.textContent =
+                `ตอกบัตรสำเร็จ • ${nearestOffice.name} • ${summaryStatus}`;
+
+            submitBtn.textContent = "ตอกบัตรแล้ว";
+            submitBtn.disabled = true;
+
+            if (liff.isInClient()) {
+                setTimeout(() => {
+                    liff.closeWindow();
+                }, 500);
+            }
+
+        } catch (error) {
+            console.error(error);
+
+            const errorMessage =
+                error && typeof error.code === "number"
+                    ? getLocationErrorMessage(error)
+                    : error.message || "ไม่สามารถตอกบัตรได้";
+
+            await Swal.fire({
+                icon: "error",
+                title: "ตอกบัตรไม่สำเร็จ",
+                text: errorMessage
+            });
+
+            statusBox.textContent =
+                "ไม่สามารถตอกบัตรได้ กรุณาตรวจสอบ GPS แล้วลองใหม่";
+
+        } finally {
+            isSubmitting = false;
+
+            const currentDate = getThaiDateTime().date;
+
+            if (!hasClockedInToday(currentDate)) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "กดเพื่อตอกบัตร";
+            }
         }
-    );
-}
+    }
 
+    /*
+     * ==========================================
+     * เริ่มต้น LIFF
+     * ==========================================
+     */
 
-/* เริ่มระบบ */
-initializeLiff();
+    async function initializeLiff() {
+        try {
+            statusBox.textContent = "กำลังเชื่อมต่อกับ LINE...";
+
+            await liff.init({
+                liffId: LIFF_ID
+            });
+
+            if (!liff.isLoggedIn()) {
+                liff.login({
+                    redirectUri: window.location.href
+                });
+                return;
+            }
+
+            const profile = await liff.getProfile();
+
+            lineUserId = profile.userId || "";
+            lineDisplayName = profile.displayName || "พนักงาน";
+
+            const today = getThaiDateTime().date;
+
+            if (hasClockedInToday(today)) {
+                statusBox.textContent =
+                    "คุณตอกบัตรเข้างานของวันนี้แล้ว";
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = "ตอกบัตรแล้ว";
+            } else {
+                statusBox.textContent =
+                    "ระบบพร้อมใช้งาน กรุณากดปุ่มตอกบัตร";
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = "กดเพื่อตอกบัตร";
+            }
+
+        } catch (error) {
+            console.error("LIFF initialization error:", error);
+
+            statusBox.textContent =
+                "เชื่อมต่อ LINE ไม่สำเร็จ กรุณาปิดแล้วเปิดใหม่";
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = "ไม่สามารถใช้งานได้";
+
+            await Swal.fire({
+                icon: "error",
+                title: "เชื่อมต่อ LINE ไม่สำเร็จ",
+                text: error.message || "กรุณาปิดหน้าต่างแล้วเปิดใหม่"
+            });
+        }
+    }
+
+    submitBtn.addEventListener("click", processClockIn);
+
+    initializeLiff();
 </script>
 
 </body>
